@@ -108,7 +108,7 @@ isomap.df <- data.frame(isomap.results$dim3)
 ggplot(isomap.df, aes(x = X1, y = X2, color = metadata$Clase)) +
   geom_point(size = 3) +
   scale_color_manual(values = c("red", "deepskyblue", "lightgreen", "#ffde21", "purple")) +
-  labs(title = "Isomap - Types of Cancer", x = 'Dim 1', y = 'Dim 2', color = "Grupo") +
+  labs(title = "Isomap", x = 'Dim 1', y = 'Dim 2', color = "Grupo") +
   theme_classic() +
   theme(panel.grid.major = element_line(color = "gray90"), panel.grid.minor = element_blank(),
         panel.background = element_rect(fill = "gray95"), plot.title=element_text(hjust=0.5))
@@ -136,3 +136,32 @@ plot_ly(
 # Ante el cambio de k, he probado con 10 y 20 y numeros por encima y debajo y este k
 # es el que mejor consigue separar los grupos, pero podria mejorarse quizas con otro
 # algoritmo.
+
+
+
+# -------------------------- DBSCAN ----------------------------
+
+library(dbscan)
+library(factoextra)
+
+pca.results <- prcomp(df_num, center=TRUE, scale.=TRUE)
+
+# Resultado de las componentes principales
+pca.df <- data.frame(pca.results$x)
+
+kNNdistplot(pca.df, k = 10);abline(h=25, lty=2, col="red") 
+
+set.seed(42)
+
+# DBSCAN con epsilon = 0.15 y minPts = 5
+dbscan_cluster <- dbscan(df_scaled, eps = 27, minPts = 5)
+
+# Resultados de la asignación
+head(dbscan_cluster$cluster)
+
+fviz_cluster(dbscan_cluster, df_scaled, geom="point")
+
+# He aplicado DBSCAN a ver si funcionaba mejor que el Kmeans pero esta claro que no.
+# Solo agrupa un cluster y algunos outliers... 
+
+
