@@ -61,15 +61,19 @@ lle_df <- data.frame(
 )
 
 # Graficamos
-ggplot(lle_df, aes(x = LLE1, y = LLE2, color = df_final$Clase)) +
-  geom_point(size = 3) +
-  scale_color_manual(values = c("red", "blue", "green", "orange", "purple")) +
-  labs(title = "Método LLE Types of Cancer", x = "X1", y = "X2", color = "Grupo") +
-  theme_classic() +
-  theme(panel.grid.major = element_line(color = "gray90"), panel.grid.minor = element_blank(),
-        panel.background = element_rect(fill = "gray95"), plot.title=element_text(hjust=0.5))
+LLE_Yannis <- ggplot(lle_df, aes(x = LLE1, y = LLE2, color = df_final$Clase)) +
+                geom_point(size = 3) +
+                scale_color_manual(values = c("red", "blue", "green", "orange", "purple")) +
+                labs(title = "Método LLE Types of Cancer", x = "X1", y = "X2", color = "Grupo") +
+                theme_classic() +
+                theme(panel.grid.major = element_line(color = "gray90"), panel.grid.minor = element_blank(),
+                      panel.background = element_rect(fill = "gray95"), plot.title=element_text(hjust=0.5))
 
-
+ggsave(
+  filename = "LLE_Yannis.png", # nombre del archivo. ES IMPORTANTE PONER LA EXTENSION .PNG...
+  plot = LLE_Yannis,# objeto ggplot
+  width = 8, height = 6, dpi = 300
+)
 
 
 
@@ -84,6 +88,7 @@ diana_euclidean <- diana(df_mat, metric = "euclidean", stand = FALSE) #uso DIANA
 # ideal para datos con diferentes escalas o datos categóricos
 diana_manhattan <- diana(df_mat, metric = "manhattan", stand = FALSE) #esta vez lo uso con distancia manhattan
 
+#euclidean
 colors <- rainbow(5)
 clust_diana_euclidean <- fviz_dend(diana_euclidean, 
                                    cex = 0.5, 
@@ -96,6 +101,13 @@ clust_diana_euclidean <- fviz_dend(diana_euclidean,
 
 clust_diana_euclidean 
 
+ggsave(
+  filename = "Diana_Euc.png", # nombre del archivo
+  plot = clust_diana_euclidean ,# objeto ggplot
+  width = 8, height = 6, dpi = 300
+)
+
+#manhattan
 colors <- rainbow(5)
 clust_diana_manhattan <- fviz_dend(diana_manhattan, 
                                    cex = 0.5, 
@@ -107,6 +119,13 @@ clust_diana_manhattan <- fviz_dend(diana_manhattan,
   theme_classic()
 
 clust_diana_manhattan
+
+
+ggsave(
+  filename = "Diana_Man.png", # nombre del archivo
+  plot = clust_diana_manhattan ,# objeto ggplot
+  width = 8, height = 6, dpi = 300
+)
 
 grid.arrange(clust_diana_euclidean, clust_diana_manhattan, nrow = 2) #PARA REPRESENTAR TODOS LOS DENDROGRAMAS JUNTOS
 #vemos que la distancia de manhattan es mejor en este caso
