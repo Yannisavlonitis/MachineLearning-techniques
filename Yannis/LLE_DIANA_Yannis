@@ -1,0 +1,115 @@
+rm(list=ls()) # Limpiar entorno
+
+setwd("C:/Users/yanni/Desktop/MASTER/CUATRI 1/Algoritmos/Actividad grupal")
+
+# Carga de datos
+# Usamos check.names = FALSE para que los nombres de los genes se mantengan exactos
+gene_exp <- read.csv("gene_expression.csv", sep = ";", header = FALSE)
+genes <- read.table("column_names.txt", stringsAsFactors = FALSE)$V1
+metadata <- read.csv("classes.csv", sep = ";", header = FALSE, col.names = c("SampleID", "Clase"))
+
+# Asignación de nombres de genes a las columnas y IDs de muestras a las filas
+colnames(gene_exp) <- genes
+rownames(gene_exp) <- metadata$SampleID
+
+# Se añade la columna de clase al final
+df_final <- gene_exp
+df_final$Clase <- metadata$Clase
+
+# Verificamos el resultado
+dim(df_final)      # Debería ser [801 filas x 501 columnas]
+head(df_final[, 1:5]) # Ver las primeras 5 columnas (genes)
+
+View(df_final)
+
+# Carga de librerias
+library(RDRToolbox) # LLE
+library(ggplot2)
+library(dplyr)
+library(factoextra)
+library(stats)
+library(ggdendro)
+library(cluster) # DIANA
+library(gridExtra)
+library(pheatmap)
+
+################################################################################ LLE
+# Algoritmo
+# Funcion LLE()
+#   x: matriz sobre la cual se va a reducir la dimensionalidad
+#   dim: numero de dimensiones de salida
+#   k: numero de vecinos cercanos. Puede aproximarse con la funcion calc_k()
+
+#   la salida será un dataframe con dimensión = dim
+
+
+# Separar datos numéricos y clase
+df_mat <- as.matrix(df_final[, -ncol(df_final)])  # Todas las columnas excepto la última (Clase), que es character
+clase <- df_final$Clase
+
+# Verificar dimensiones
+dim(df_mat)  # Debería ser [801 x 500]
+
+# Ahora aplicar LLE. Se podria construir un optimizador del k (entre 5%-15% de la muestra)
+lle.results <- LLE(df_mat, dim = 2, k = 50)
+
+# Crear dataframe para visualización
+lle_df <- data.frame(
+  LLE1 = lle.results[, 1],
+  LLE2 = lle.results[, 2],
+  Clase = clase
+)
+
+# Graficamos
+ggplot(lle_df, aes(x = LLE1, y = LLE2, color = df_final$Clase)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c("red", "blue", "green", "orange", "purple")) +
+  labs(title = "Método LLE Types of Cancer", x = "X1", y = "X2", color = "Grupo") +
+  theme_classic() +
+  theme(panel.grid.major = element_line(color = "gray90"), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "gray95"), plot.title=element_text(hjust=0.5))
+
+
+
+
+
+################################################################################ Clustering jerarquico divisivo: DIANA
+
+# Implementación del clustering divisivo
+df_scaled <- scale(df_mat)
+
+
+# ideal para datos donde las distancias más pequeñas
+diana_euclidean <- diana(df_mat, metric = "euclidean", stand = FALSE) #uso DIANA, meto metrica euclidean (aunque esta ya es default) y stand = FALSE porque ya hemos estandarizado antes
+# ideal para datos con diferentes escalas o datos categóricos
+diana_manhattan <- diana(df_mat, metric = "manhattan", stand = FALSE) #esta vez lo uso con distancia manhattan
+
+colors <- rainbow(5)
+clust_diana_euclidean <- fviz_dend(diana_euclidean, 
+                                   cex = 0.5, 
+                                   k = 5,
+                                   palette = colors, 
+                                   main = 'Euclidean',
+                                   xlab = "Índice de Observaciones",
+                                   ylab = "Distancia") + 
+  theme_classic()
+
+clust_diana_euclidean 
+
+colors <- rainbow(5)
+clust_diana_manhattan <- fviz_dend(diana_manhattan, 
+                                   cex = 0.5, 
+                                   k = 5,
+                                   palette = colors, 
+                                   main = 'Manhattan',
+                                   xlab = "Índice de Observaciones",
+                                   ylab = "Distancia") + 
+  theme_classic()
+
+clust_diana_manhattan
+
+grid.arrange(clust_diana_euclidean, clust_diana_manhattan, nrow = 2) #PARA REPRESENTAR TODOS LOS DENDROGRAMAS JUNTOS
+#vemos que la distancia de manhattan es mejor en este caso
+
+
+
