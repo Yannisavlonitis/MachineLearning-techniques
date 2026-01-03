@@ -1,0 +1,81 @@
+
+# Carga de librerias
+library(stats)   # librería para el PCA
+library(ggplot2) # librería para hacer la representación gráfica
+library(cluster)# librería para hacer la clusterización
+install.packages("factoextra")
+library(factoextra)
+
+# Valores NA y 0
+anyNA(df_final) #No hay valores NA
+any(df_final == 0)
+zero_counts <- colSums(df_final == 0)
+zero_counts #Hay valores 0
+
+# Calculo de componentes principales con la funcion prcomp
+sapply(df_final, class) #me dice que la variable "clase" es character
+df_pca <- df_final[, sapply(df_final, is.numeric)] #toma solo las variables numericas
+pca.results <- prcomp(df_pca, center=TRUE, scale.=FALSE) #variables centradas en 0 y con varianza 1
+str(pca.results)
+tail(pca.results)
+
+# Resultado de las componentes principales
+pca.df <- data.frame(pca.results$x)
+
+# Varianza (cuadrado de la desviacion tipica)
+varianzas <- pca.results$sdev^2
+
+# Total de la varianza de los datos
+total.varianza <- sum(varianzas)
+
+# Varianza explicada por cada componente principal
+varianza.explicada <- varianzas/total.varianza
+
+# Calculamos la varianza acumulada 
+varianza.acumulada <- cumsum(varianza.explicada)
+
+# Tomamos el numero de componentes principales que explican el 90% de la varianza
+n.pc <- min(which(varianza.acumulada > 0.90))
+
+# Etiquetas de los ejes del gráfico
+x_label <- paste0(paste('PC1', round(varianza.explicada[1] * 100, 2)), '%')
+y_label <- paste0(paste('PC2', round(varianza.explicada[2] * 100, 2)), '%')
+
+# Representación gráfica de las primeras dos componentes principales respecto a los datos
+ggplot(pca.df, aes(x=PC1, y=PC2, color=df_final$Clase)) +
+  geom_point(size=3) +
+  scale_color_manual(values=c('red', 'blue', 'green', 'orange', 'purple')) +
+  labs(title='PCA - Expresión Génica', x=x_label, y=y_label, color='Clase') +
+  theme_classic() +
+  theme(panel.grid.major = element_line(color="gray90"), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "gray95"), plot.title = element_text(hjust = 0.5))
+
+#### Clustering jerarquico aglomerativo
+df_complet <- df_final[, sapply(df_final, is.numeric)] #seleccionamos las variables numericas
+# Calcular la matriz de distancia
+dist_matrix <- dist(df_complet, method = )
+
+# Se ejecuta el algoritmo de clusterización jerárquica aglomerativa
+
+
+# agrupa los clusters usando la distancia entre los puntos más ALEJADOS
+hclust_model_complete <- hclust(dist_matrix, method = "complete") 
+
+# Definimos los colores que vamos a utilizar en los dendogramas
+colors <- rainbow(4)
+
+# complete: crea clusters compactos y bien definidos, PERO es sensible a puntos 
+#           extremos (outliers), que pueden distorsionar los clusters
+clust_complete <- fviz_dend(hclust_model_complete, 
+                            cex = 0.5,
+                            k = 4,
+                            palette = colors,
+                            main = "Complete",
+                            xlab = "Número de muestra",
+                            ylab = "Distancia") + 
+  theme_classic()
+
+clust_complete
+
+#orden dendrogramas
+hclust_model_complete$order
