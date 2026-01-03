@@ -91,9 +91,11 @@ diana_manhattan <- diana(df_mat, metric = "manhattan", stand = FALSE) #esta vez 
 #euclidean
 colors <- rainbow(5)
 clust_diana_euclidean <- fviz_dend(diana_euclidean, 
-                                   cex = 0.5, 
-                                   k = 5,
+                                   cex = 0.5, # tamño general del texto
+                                   k = 5, # numero de grupos
                                    palette = colors, 
+                                   lwd = 0.5, # hacer mas finas las lineas del dendrograma
+                                   rect = 5,# pone cuadrados punteados al rededor de cada grupo (k)
                                    main = 'Euclidean',
                                    xlab = "Índice de Observaciones",
                                    ylab = "Distancia") + 
@@ -110,9 +112,11 @@ ggsave(
 #manhattan
 colors <- rainbow(5)
 clust_diana_manhattan <- fviz_dend(diana_manhattan, 
-                                   cex = 0.5, 
+                                   cex = 0.3, 
                                    k = 5,
                                    palette = colors, 
+                                   lwd = 0.5,
+                                   rect = 5,
                                    main = 'Manhattan',
                                    xlab = "Índice de Observaciones",
                                    ylab = "Distancia") + 
@@ -127,8 +131,12 @@ ggsave(
   width = 8, height = 6, dpi = 300
 )
 
-grid.arrange(clust_diana_euclidean, clust_diana_manhattan, nrow = 2) #PARA REPRESENTAR TODOS LOS DENDROGRAMAS JUNTOS
+MAn_Euc_Diana <- grid.arrange(clust_diana_euclidean, clust_diana_manhattan, nrow = 2) #PARA REPRESENTAR TODOS LOS DENDROGRAMAS JUNTOS
 #vemos que la distancia de manhattan es mejor en este caso
 
-
+ggsave(
+  filename = "Man_Euc_Diana.png", # nombre del archivo
+  plot = MAn_Euc_Diana ,# objeto ggplot
+  width = 8, height = 6, dpi = 300
+)
 
