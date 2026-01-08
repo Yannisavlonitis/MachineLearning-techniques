@@ -29,7 +29,6 @@ library(tidyverse)
 library(glmnet)
 library(dplyr)
 library(gridExtra)
-library(pROC)
 library(e1071)
 
 # Dividir el conjunto de datos en conjuntos de entrenamiento y prueba
@@ -52,7 +51,7 @@ svmModelLineal    #The final value used for the model was C = 0.2758621.
 plot(svmModelLineal)
 
 # Predicciones en el conjunto de prueba utilizando el modelo entrenado
-predictionsL <- predict(svmModelKernel, newdata = testData )
+predictionsL <- predict(svmModelLineal, newdata = testData )
 predictionsL
 
 # Evaluar la precisión del modelo utilizando la matriz de confusión
@@ -201,3 +200,4 @@ confusionMatrix(predictionsP, testData$Clase)
 # SVM kernelpol
 probabilities_svm_kernelpol <- predict(svmModelKernelPolynomial, newdata = testData, type = "prob")
 probabilities_svm_kernelpol
+
