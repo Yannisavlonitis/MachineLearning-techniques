@@ -88,6 +88,9 @@ confusionMatrix(predictionsL, testData$Clase)
 #Detection Prevalence     0.1824     0.3962     0.3145    0.02516    0.08176
 #Balanced Accuracy        1.0000     0.9848     0.9160    0.57407    0.93333
 
+probabilities_svm_Lineal <- predict(svmModelLineal, newdata = testData, type = "prob")
+probabilities_svm_Lineal
+
 ### SVM Kernel radial###
 svmModelKernel <- train(Clase ~.,
                         data = trainData,
@@ -200,4 +203,5 @@ confusionMatrix(predictionsP, testData$Clase)
 # SVM kernelpol
 probabilities_svm_kernelpol <- predict(svmModelKernelPolynomial, newdata = testData, type = "prob")
 probabilities_svm_kernelpol
+
 
