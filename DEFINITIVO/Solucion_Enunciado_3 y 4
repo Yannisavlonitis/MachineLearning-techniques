@@ -1,0 +1,41 @@
+3. Métodos supervisados (1,75 puntos):
+◦ ¿Cuál es el motivo por el cual habéis seleccionado esas técnicas de aprendizaje supervisado? ¿Cuál ha dado mejores resultados a la hora de clasificar las muestras? Razonad vuestra respuesta.
+Se han aplicado diferentes métodos de clasificación supervisado. Tras analizar las matrices de confusión hemos considerado que K-NN, LDA, GMB  son las que mejor identifican 
+los tumores en función de la expresión diferencial de los genes, presentan muy pocos o ningún falso positivo y/o negativo. 
+Además los valores de precisión (Accuracy: GBM	0.979	) son altos, los intervalos de confianza (CI) bastante ajustados ( GBM: 0.9517, 0.9931) 
+y la concordancia entre predicciones alta(Kappa GBM: 	0.9721)
+        
+Pendiente interpretación
+
+◦ ¿Habéis considerado oportuno implementar algún método de reducción de dimensionalidad para procesar los datos antes de implementarlos en dichas técnicas? ¿Por qué?. 
+Es conveniente aplicar la reducción de dimensionalidad cuando el número de muestras del que se parte es 10 veces mayor que el número de variables a analizar. 
+En nuestro ejercicio se partía de 800 muestas y 500 genes.
+◦ ¿Qué aspectos positivos y negativos tienen cada una de las técnicas que habéis escogido? (0,25 puntos).
+
+K-NN no construye un modelo sino que revisa datos, busca entre los k vecinos mas similares y asigna una etiqueta que luego usa para etiquetar nuevos datos. 
+Este algoritmo es muy simple de comprender y de implementar. Al no construir un modelo es poco costoso computacionalmente. 
+Esto también facilita que pueda responder de manera rápida ante cambios en  entradas de datos. 
+Entre sus desventajas está la selección del valor K que muchas veces se realiza de manera arbitraia y que la etapa de clasificación puede ser 
+especialmente lenta a medida que aumenta el tamaño de los datos. Además este algoritmo no puede manejar datos faltantes 
+y, sin un procesamiento previo, tampoco datos nominales o atípicos. Por concluir con las desventajas, no muestra un buen rendimiento en el caso de datos desequilibrados 
+
+Comparando el método LDA con la regresión logística presenta dos ventajas, por un lado que las clases estén bien separadas 
+no aporta inestabilidad a los parámetros estimados y por otro lado, para un bajo número de observaciones  este método es más estable. 
+Como desventaja podemos destacar que requiere una distribución normal de los datos e igualdad de varianzas
+
+El algoritmo GBM va construyendo un conjunto de árboles débiles de manera sucesiva para combinarlos, 
+reducir el error y generar un modelo más preciso. Ventajas: ofrece muchas opciones de ajuste de hiperparámetros lo que hace que sea 
+un algorimo muy flexible. Funciona muy bien con datos categóricos y numéricos y faltantes sin necesidad de procesar o imputar los datos. 
+Por otro lado, a parte de que es costoso computacionalemnte, el hecho de que este algoritmo sigue trabajando para minimizar todos 
+los errores conlleva el riesgo de que enfatice demasiado los valores atípicos y produzca sobreajuste
+
+Pregunta 4
+Pese a que la opción a (red de perceptones) es la opción clásica cuando comparamos muestras con genes, esta opción ignora
+las interacciones entre genes. Las redes convolucionales se usan para datos como imágenes y las redes recurrentes para secuencias como
+texto y audio. 
+Sin embargo, la opción d (redes de grafos) es la decisión más adecuada, ya que los genes no funcionan aislados, sino que forman parte
+de rutas regulatorias y rutas metabólicas. Las redes de grafos utilizan la información de un vecino y la compara entre el resto de sus
+vecinos. Estas utilizan relaciones no lineales, lo que permiten integrar la información de los genes (serían los nodos del modelo), como
+la interacción entre estos (que serían las aristas del modelo). Las redes de grafos además permiten aislar el ruido frente a otras opciones
+como las redes recurrentes.
+

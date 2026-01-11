@@ -1,8 +1,0 @@
-Pese a que la opción a (red de perceptones) es la opción clásica cuando comparamos muestras con genes, esta opción ignora
-las interacciones entre genes. Las redes convolucionales se usan para datos como imágenes y las redes recurrentes para secuencias como
-texto y audio. 
-Sin embargo, la opción d (redes de grafos) es la decisión más adecuada, ya que los genes no funcionan aislados, sino que forman parte
-de rutas regulatorias y rutas metabólicas. Las redes de grafos utilizan la información de un vecino y la compara entre el resto de sus
-vecinos. Estas utilizan relaciones no lineales, lo que permiten integrar la información de los genes (serían los nodos del modelo), como
-la interacción entre estos (que serían las aristas del modelo). Las redes de grafos además permiten aislar el ruido frente a otras opciones
-como las redes recurrentes.
