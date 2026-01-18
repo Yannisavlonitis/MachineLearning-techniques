@@ -1,9 +1,8 @@
 3. Métodos supervisados (1,75 puntos):
 ◦ ¿Cuál es el motivo por el cual habéis seleccionado esas técnicas de aprendizaje supervisado? ¿Cuál ha dado mejores resultados a la hora de clasificar las muestras? Razonad vuestra respuesta.
-Se han aplicado diferentes métodos de clasificación supervisado. Tras analizar las matrices de confusión hemos considerado que K-NN, LDA, GMB  son las que mejor identifican 
-los tumores en función de la expresión diferencial de los genes, presentan muy pocos o ningún falso positivo y/o negativo. 
-Además los valores de precisión (Accuracy: GBM	0.979	) son altos, los intervalos de confianza (CI) bastante ajustados ( GBM: 0.9517, 0.9931) 
-y la concordancia entre predicciones alta(Kappa GBM: 	0.9721)
+Tras analizar varios métodos de aprendizaje supervisado, se han seleccionado determinados modelos por dos motivos principales: el resultado de la comparación de métodos mediante gráficas ROC (que relacionan el equilibrio entre la detección de verdaderos positivos y la evitación de falsos positivos) y la calidad del algoritmo, que queda plasmada en las matrices de confusión.
+En cuanto a la matriz de confusión, los métodos elegidos han sido aquellos con mayor accuracy en comparación con los demás, siendo capaces de clasificar correctamente cerca del 98% de las muestras. Asimismo, al observar la gráfica ROC, se aprecia que todos los métodos de aprendizaje supervisado presentan una gran efectividad y una proporción de verdaderos positivos mucho mayor que la de falsos positivos, salvo el método GBM, que muestra un rendimiento inferior.
+Tras el análisis de las matrices de confusión, se ha considerado que K-NN, LDA y GBM son los métodos que mejor identifican los tumores en función de la expresión diferencial de los genes, ya que presentan muy pocos o ningún falso positivo y/o negativo. Además, los valores de precisión son elevados (Accuracy GBM: 0.979), los intervalos de confianza son bastante ajustados (GBM: 0.9517–0.9931) y la concordancia entre predicciones es alta (Kappa GBM: 0.9721).
         
 Pendiente interpretación
 
