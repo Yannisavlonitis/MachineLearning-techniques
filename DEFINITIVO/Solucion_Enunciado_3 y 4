@@ -8,8 +8,8 @@ correctamente cerca del 98% de las muestras. Asimismo, al observar la gráfica R
 una gran efectividad y una proporción de verdaderos positivos mucho mayor que la de falsos positivos, salvo el método GBM, que muestra un rendimiento inferior.
 Tras el análisis de las matrices de confusión, se ha considerado que K-NN, LDA y DT son los métodos que mejor identifican los tumores en función de la 
 expresión diferencial de los genes, ya que presentan muy pocos o ningún falso positivo y/o negativo. Además, los valores de precisión 
-son elevados (Accuracy GBM: 0.979), los intervalos de confianza son bastante ajustados (GBM: 0.9517–0.9931) y 
-la concordancia entre predicciones es alta (Kappa GBM: 0.9721).
+son elevados (Accuracy K-NN: 0.9937, LDA:0.9874 y DT:0.9057), los intervalos de confianza son bastante ajustados (K-NN:0.9655, 0.9998; LDA:0.9553, 0.9985   y DT:0.8492, 0.9462) y 
+la concordancia entre predicciones es alta (Kappa K-NN:0.9917, LDA:0.9834 y DT:0.8755).
         
 Pendiente interpretación
 
