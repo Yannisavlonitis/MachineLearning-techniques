@@ -1,3 +1,7 @@
+Interpretación:
+- LDA: al observar el gráfico se puede ver que hay una clara separación entre grupos de cáncer, por lo que hay unaalta separabilidad inter-clase, por lo que las variables utilizadas sí contienen información relevante para distinguir tipos de cáncer. Aunque los cinco grupos están separados, se puede apreciar una tendencia entre los grupos CFB y HPB, que aparecen más juntos. Esto sugiere unos patrones de expresión similares.
+- DT: cada nodo evalúa una condición sobre un gen específico (por ejemplo, ATP5PD >= 6.2) y dirige la muestra hacia una rama u otra.
+
 3. Métodos supervisados (1,75 puntos):
 ◦ ¿Cuál es el motivo por el cual habéis seleccionado esas técnicas de aprendizaje supervisado? ¿Cuál ha dado mejores resultados a la hora de clasificar las muestras? Razonad vuestra respuesta.
 Tras analizar varios métodos de aprendizaje supervisado, se han seleccionado determinados modelos por dos motivos principales: 
@@ -10,8 +14,6 @@ Tras el análisis de las matrices de confusión, se ha considerado que K-NN, LDA
 expresión diferencial de los genes, ya que presentan muy pocos o ningún falso positivo y/o negativo. Además, los valores de precisión 
 son elevados (Accuracy GBM: 0.979), los intervalos de confianza son bastante ajustados (GBM: 0.9517–0.9931) y 
 la concordancia entre predicciones es alta (Kappa GBM: 0.9721).
-        
-Pendiente interpretación
 
 ◦ ¿Habéis considerado oportuno implementar algún método de reducción de dimensionalidad para procesar los datos antes de implementarlos en dichas técnicas? ¿Por qué?. 
 Es conveniente aplicar la reducción de dimensionalidad cuando el número de muestras del que se parte es 10 veces mayor que el número de variables a analizar. 
