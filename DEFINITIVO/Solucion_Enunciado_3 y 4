@@ -1,8 +1,15 @@
 3. Métodos supervisados (1,75 puntos):
 ◦ ¿Cuál es el motivo por el cual habéis seleccionado esas técnicas de aprendizaje supervisado? ¿Cuál ha dado mejores resultados a la hora de clasificar las muestras? Razonad vuestra respuesta.
-Tras analizar varios métodos de aprendizaje supervisado, se han seleccionado determinados modelos por dos motivos principales: el resultado de la comparación de métodos mediante gráficas ROC (que relacionan el equilibrio entre la detección de verdaderos positivos y la evitación de falsos positivos) y la calidad del algoritmo, que queda plasmada en las matrices de confusión.
-En cuanto a la matriz de confusión, los métodos elegidos han sido aquellos con mayor accuracy en comparación con los demás, siendo capaces de clasificar correctamente cerca del 98% de las muestras. Asimismo, al observar la gráfica ROC, se aprecia que todos los métodos de aprendizaje supervisado presentan una gran efectividad y una proporción de verdaderos positivos mucho mayor que la de falsos positivos, salvo el método GBM, que muestra un rendimiento inferior.
-Tras el análisis de las matrices de confusión, se ha considerado que K-NN, LDA y GBM son los métodos que mejor identifican los tumores en función de la expresión diferencial de los genes, ya que presentan muy pocos o ningún falso positivo y/o negativo. Además, los valores de precisión son elevados (Accuracy GBM: 0.979), los intervalos de confianza son bastante ajustados (GBM: 0.9517–0.9931) y la concordancia entre predicciones es alta (Kappa GBM: 0.9721).
+Tras analizar varios métodos de aprendizaje supervisado, se han seleccionado determinados modelos por dos motivos principales: 
+el resultado de la comparación de métodos mediante gráficas ROC (que relacionan el equilibrio entre la detección de verdaderos positivos y la evitación 
+de falsos positivos) y la calidad del algoritmo, que queda plasmada en las matrices de confusión.
+En cuanto a la matriz de confusión, los métodos elegidos han sido aquellos con mayor accuracy en comparación con los demás, siendo capaces de clasificar 
+correctamente cerca del 98% de las muestras. Asimismo, al observar la gráfica ROC, se aprecia que todos los métodos de aprendizaje supervisado presentan 
+una gran efectividad y una proporción de verdaderos positivos mucho mayor que la de falsos positivos, salvo el método GBM, que muestra un rendimiento inferior.
+Tras el análisis de las matrices de confusión, se ha considerado que K-NN, LDA y DT son los métodos que mejor identifican los tumores en función de la 
+expresión diferencial de los genes, ya que presentan muy pocos o ningún falso positivo y/o negativo. Además, los valores de precisión 
+son elevados (Accuracy GBM: 0.979), los intervalos de confianza son bastante ajustados (GBM: 0.9517–0.9931) y 
+la concordancia entre predicciones es alta (Kappa GBM: 0.9721).
         
 Pendiente interpretación
 
@@ -18,15 +25,14 @@ Entre sus desventajas está la selección del valor K que muchas veces se realiz
 especialmente lenta a medida que aumenta el tamaño de los datos. Además este algoritmo no puede manejar datos faltantes 
 y, sin un procesamiento previo, tampoco datos nominales o atípicos. Por concluir con las desventajas, no muestra un buen rendimiento en el caso de datos desequilibrados 
 
-Comparando el método LDA con la regresión logística presenta dos ventajas, por un lado que las clases estén bien separadas 
+Comparando el método LDA con la regresión logística presenta dos ventajas, por un lado que las clases estén bien separadas, 
 no aporta inestabilidad a los parámetros estimados y por otro lado, para un bajo número de observaciones  este método es más estable. 
 Como desventaja podemos destacar que requiere una distribución normal de los datos e igualdad de varianzas
 
-El algoritmo GBM va construyendo un conjunto de árboles débiles de manera sucesiva para combinarlos, 
-reducir el error y generar un modelo más preciso. Ventajas: ofrece muchas opciones de ajuste de hiperparámetros lo que hace que sea 
-un algorimo muy flexible. Funciona muy bien con datos categóricos y numéricos y faltantes sin necesidad de procesar o imputar los datos. 
-Por otro lado, a parte de que es costoso computacionalemnte, el hecho de que este algoritmo sigue trabajando para minimizar todos 
-los errores conlleva el riesgo de que enfatice demasiado los valores atípicos y produzca sobreajuste
+El algoritmo DT puede manejar variables predictoras categóricas y continuas, no hace suposiciones sobre la distribución de las variables predictoras.
+Permite trabajar con valores faltantes y variables continuas en diferentes escalas de manera razonable. Como aspecos negativos podemos comentar que los 
+árboles individuales son muy susceptibles al sobreajuste, tanto que rara vez se utilizan. Reducen la información al clasificar variables de tipo continuo. 
+Además son muy inestabilidad, ligero cambio en los datos puede tener un impacto significativo en la estructura del árbol.
 
 Pregunta 4
 Pese a que la opción a (red de perceptones) es la opción clásica cuando comparamos muestras con genes, esta opción ignora
