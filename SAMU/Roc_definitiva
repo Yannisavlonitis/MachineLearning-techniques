@@ -1,0 +1,77 @@
+# 1. CARGA DE LIBRERÍA
+library(pROC)
+
+# 2. LISTA DE LOS 6 ARCHIVOS GENERADOS
+archivos <- list(
+  ARBOL = "arbol_probabilities.rds", # [cite: 2]
+  KNN   = "probabilities_knn.rds",   # [cite: 6]
+  LDA   = "probabilities_lda.rds"    # 
+)
+
+# 3. CONFIGURACIÓN DE ETIQUETAS (Las 238 del set de test)
+target_class <- "CFB"
+etiquetas_test <- test_lda$Clase 
+# Es fundamental que test_lda tenga rownames para la sincronización
+names(etiquetas_test) <- rownames(test_lda)
+
+# 4. PROCESAMIENTO CON ALINEACIÓN DINÁMICA
+colores <- c("#E41A1C", "#377EB8", "#4DAF4A")
+plot.new()
+first_plot <- TRUE
+
+for (i in seq_along(archivos)) {
+  nombre <- names(archivos)[i]
+  obj <- readRDS(archivos[[i]])
+  
+  # A. Extracción de probabilidad según el formato del objeto
+  p <- if (is.list(obj) && !is.null(obj$posterior)) {
+    obj$posterior[, target_class]
+  } else if (is.matrix(obj) || is.data.frame(obj)) {
+    obj[, target_class]
+  } else {
+    as.numeric(as.factor(obj)) 
+  }
+  
+  # B. Sincronización por ID de muestra (Soluciona el error 159 vs 238)
+  if (!is.null(names(p))) {
+    ids_comunes <- intersect(names(p), names(etiquetas_test))
+    p_final <- p[ids_comunes]
+    y_final <- etiquetas_test[ids_comunes]
+  } else if (length(p) == length(etiquetas_test)) {
+    p_final <- p
+    y_final <- etiquetas_test
+  } else {
+    p_final <- NULL 
+  }
+  
+  # C. Limpieza de NA/NaN y Generación de Curva
+  if (!is.null(p_final)) {
+    # Eliminamos NAs de forma individual para este modelo
+    df_roc <- na.omit(data.frame(y = ifelse(y_final == target_class, 1, 0), prob = p_final))
+    
+    if (nrow(df_roc) > 0 && length(unique(df_roc$y)) == 2) {
+      res_roc <- roc(df_roc$y, df_roc$prob, quiet = TRUE)
+      
+      if (first_plot) {
+        plot(res_roc, col = colores[i], lwd = 2.5, legacy.axes = TRUE,
+             main = "Comparativa de Modelos: Diagnóstico de Expresión Génica",
+             xlab = "Especificidad (1-FP)", ylab = "Sensibilidad (VP)")
+        first_plot <- FALSE
+      } else {
+        plot(res_roc, col = colores[i], add = TRUE, lwd = 2.5)
+      }
+      assign(paste0("auc_", nombre), round(as.numeric(auc(res_roc)), 2))
+    } else {
+      assign(paste0("auc_", nombre), "NA/NaN")
+    }
+  } else {
+    assign(paste0("auc_", nombre), "Err Dim")
+  }
+}
+
+# 5. LEYENDA Y LÍNEA DE REFERENCIA
+legend_txt <- sapply(names(archivos), function(n) {
+  paste0(toupper(n), " (AUC: ", get(paste0("auc_", n)), ")")
+})
+legend("bottomright", legend = legend_txt, col = colores, lwd = 2.5, cex = 0.7, bty = "n")
+abline(a = 1, b = -1, lty = 2, col = "darkgrey")
