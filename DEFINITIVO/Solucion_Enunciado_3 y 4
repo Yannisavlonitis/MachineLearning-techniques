@@ -8,8 +8,8 @@ correctamente cerca del 98% de las muestras. Asimismo, al observar la gráfica R
 una gran efectividad y una proporción de verdaderos positivos mucho mayor que la de falsos positivos, salvo el método GBM, que muestra un rendimiento inferior.
 Tras el análisis de las matrices de confusión, se ha considerado que K-NN, LDA y DT son los métodos que mejor identifican los tumores en función de la 
 expresión diferencial de los genes, ya que presentan muy pocos o ningún falso positivo y/o negativo. Además, los valores de precisión 
-son elevados (Accuracy K-NN: 0.9937, LDA:0.9874 y DT:0.9057), los intervalos de confianza son bastante ajustados (K-NN:0.9655, 0.9998; LDA:0.9553, 0.9985   y DT:0.8492, 0.9462) y 
-la concordancia entre predicciones es alta (Kappa K-NN:0.9917, LDA:0.9834 y DT:0.8755).
+son elevados (Accuracy K-NN: 0.9937, LDA:0.9874 y GMB:), los intervalos de confianza son bastante ajustados (K-NN:0.9655, 0.9998; LDA:0.9553, 0.9985   y GMB:) y 
+la concordancia entre predicciones es alta (Kappa K-NN:0.9917, LDA:0.9834 y GMB:).
         
 Pendiente interpretación
 
@@ -29,10 +29,12 @@ Comparando el método LDA con la regresión logística presenta dos ventajas, po
 no aporta inestabilidad a los parámetros estimados y por otro lado, para un bajo número de observaciones  este método es más estable. 
 Como desventaja podemos destacar que requiere una distribución normal de los datos e igualdad de varianzas
 
-El algoritmo DT puede manejar variables predictoras categóricas y continuas, no hace suposiciones sobre la distribución de las variables predictoras.
-Permite trabajar con valores faltantes y variables continuas en diferentes escalas de manera razonable. Como aspecos negativos podemos comentar que los 
-árboles individuales son muy susceptibles al sobreajuste, tanto que rara vez se utilizan. Reducen la información al clasificar variables de tipo continuo. 
-Además son muy inestabilidad, ligero cambio en los datos puede tener un impacto significativo en la estructura del árbol.
+El algoritmo GBM va construyendo un conjunto de árboles débiles de manera sucesiva para combinarlos, 
+reducir el error y generar un modelo más preciso. Ventajas: ofrece muchas opciones de ajuste de hiperparámetros lo que hace que sea 
+un algorimo muy flexible. Funciona muy bien con datos categóricos y numéricos y faltantes sin necesidad de procesar o imputar los datos. 
+Por otro lado, a parte de que es costoso computacionalemnte, el hecho de que este algoritmo sigue trabajando para minimizar todos 
+los errores conlleva el riesgo de que enfatice demasiado los valores atípicos y produzca sobreajuste
+
 
 Pregunta 4
 Pese a que la opción a (red de perceptones) es la opción clásica cuando comparamos muestras con genes, esta opción ignora
