@@ -13,6 +13,7 @@ la concordancia entre predicciones es alta (Kappa K-NN:0.9917, LDA:0.9834 y GMB:
         
 Interpretación:
 - K-NN: con un AUC = 0,99. Este método clasifica las cinco variables (AGH, CFB, CGC, CHC y HPB). El AUC de este método en cada variable es 1.
+El modelo muestra fluctuaciones en la precisión, con varios picos locales. La precisión generalmente se mantiene muy alta (>98.7%) en todo el rango, lo que indica la robustez del algoritmo. Se puede apreciar que la mayor accuracy se da con un k = 11.
 - LDA: con un AUC = 0,99. Este método clasifica las cinco variables (AGH, CFB, CGC, CHC y HPB). El AUC de este método en cada variable es 1.
 Como se puede observar, LD1 (eje horizontal) es la primera función discriminante, que captura la mayor variación entre grupos, mientras que LD2 (eje vertical), la d¡segunda función discriminante captura la segunda mayor variación
 En el plot se pueden apreciar cinco clústers bien definidos, cada uno correspondiendo a una clase distinta. Estos clústers no muestran un solapamiento, por lo que el modelo ha sido capaz de encontrar combinaciones lineales de características que discriminan entre estos tipos de cáncer. 
