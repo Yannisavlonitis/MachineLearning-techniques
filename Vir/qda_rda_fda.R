@@ -96,3 +96,5 @@ conf_rda
 # Obtener probabilidades
 probabilities_rda <- predict(rda_model, newdata = testData, type = "prob")
 probabilities_rda
+
+saveRDS(probabilities_rda, file = "probabilities_rda.rds")
