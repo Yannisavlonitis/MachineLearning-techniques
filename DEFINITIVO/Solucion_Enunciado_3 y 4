@@ -11,7 +11,11 @@ expresión diferencial de los genes, ya que presentan muy pocos o ningún falso 
 son elevados (Accuracy K-NN: 0.9937, LDA:0.9874 y GMB:0.979), los intervalos de confianza son bastante ajustados (K-NN:0.9655, 0.9998; LDA:0.9553, 0.9985 y GMB:0.9517,0.9931) y 
 la concordancia entre predicciones es alta (Kappa K-NN:0.9917, LDA:0.9834 y GMB:0.9721).
         
-Pendiente interpretación
+Interpretación:
+- K-NN: con un AUC = 0,99. Este método clasifica las cinco variables (AGH, CFB, CGC, CHC y HPB). El AUC de este método en cada variable es 1.
+- LDA: con un AUC = 0,99. Este método clasifica las cinco variables (AGH, CFB, CGC, CHC y HPB). El AUC de este método en cada variable es 1.
+Al observar el plot, se pueden apreciar cinco clústers bien definidos, cada uno correspondiendo a una clase distinta. Estos clústers no muestran un solapamiento. Los grupos CFB y HBP se encuentran cerca, pudiendo sugerir una posible similitud en los patrones de expresión de ambos.
+- DT: con un AUC = 0,95
 
 ◦ ¿Habéis considerado oportuno implementar algún método de reducción de dimensionalidad para procesar los datos antes de implementarlos en dichas técnicas? ¿Por qué?. 
 Es conveniente aplicar la reducción de dimensionalidad cuando el número de muestras del que se parte es 10 veces mayor que el número de variables a analizar. 
