@@ -11,7 +11,30 @@ expresión diferencial de los genes, ya que presentan muy pocos o ningún falso 
 son elevados (Accuracy K-NN: 0.9937, LDA:0.9874 y GMB:0.979), los intervalos de confianza son bastante ajustados (K-NN:0.9655, 0.9998; LDA:0.9553, 0.9985 y GMB:0.9517,0.9931) y 
 la concordancia entre predicciones es alta (Kappa K-NN:0.9917, LDA:0.9834 y GMB:0.9721).
         
-Pendiente interpretación
+Interpretación:
+- K-NN: con un AUC = 0,99. Este método clasifica las cinco variables (AGH, CFB, CGC, CHC y HPB). El AUC de este método en cada variable es 1.
+El modelo muestra fluctuaciones en la precisión, con varios picos locales. La precisión generalmente se mantiene muy alta (>98.7%) en todo el rango, lo que indica la robustez del algoritmo. Se puede apreciar que la mayor accuracy se da con un k = 11.
+- LDA: con un AUC = 0,99. Este método clasifica las cinco variables (AGH, CFB, CGC, CHC y HPB). El AUC de este método en cada variable es 1.
+Como se puede observar, LD1 (eje horizontal) es la primera función discriminante, que captura la mayor variación entre grupos, mientras que LD2 (eje vertical), la d¡segunda función discriminante captura la segunda mayor variación
+En el plot se pueden apreciar cinco clústers bien definidos, cada uno correspondiendo a una clase distinta. Estos clústers no muestran un solapamiento, por lo que el modelo ha sido capaz de encontrar combinaciones lineales de características que discriminan entre estos tipos de cáncer. 
+- DT: con un AUC = 0,95. 
+El árbol inicia la clasificación evaluando la expresión del gen ATP5PD. Esta primera división es crítica, ya que procesa el 100% de las muestras y establece dos ramas principales:
+-- Cuando ATP5PD >= 6.2, el modelo clasifica las muestras como AGH con una confianza del 96%, representando el 18% del conjunto total de datos. Esta rama terminal tiene una gran pureza , con una distribución de clases de .96 .01 .00 .03 .00, por lo que prácticamente todas las muestras en este nodo corresponden a AGH.
+-- Para valores de ATP5PD < 6.2, el algoritmo continúa subdividiendo las muestras mediante evaluaciones adicionales de otros genes, procesando el 82% restante de los datos.
+En la segunda división, el modelo evalúa a expresión de PDE6D con un umbral de 1.1. Esta variable discrimina, de nuevo, entre dos subgrupos principales:
+-- La rama izquierda (PDE6D < 1.1) captura el 41% de las muestras totales y muestra una fuerte tendencia hacia CFB, con una distribución de .02 .85 .01 .09 .03. Esta rama continúa subdividiéndose mediante la evaluación del gen OR51F1.
+-- La rama derecha (PDE6D >= 1.1) procesa otro 41% de las muestras y presenta mayor heterogeneidad, predominando CGC con una distribución de .00 .06 .42 .32 .21. Esta vía se ramifica a su vez usando CPSF2 como criterio discriminante.
+En la tercera capa o división, en la rama de PDE6D < 1.1, el gen OR51F1 con umbral de 3.8 separa:
+-- OR51F1 < 3.8 indica CFB (36% de muestras totales) con alta pureza (.00 .95 .01 .00 .03)
+-- OR51F1 >= 3.8 indica CHC (5% de muestras) con distribución .12 .12 .00 .73 .04
+En la rama de PDE6D >= 1.1, el gen CPSF2 con umbral de 6.4 separa:
+-- CPSF2 < 6.4 indica CGC (28% de muestras totales) con distribución .00 .08 .60 .02 .30
+-- CPSF2 >= 6.4 indica CHC (13% de muestras) con distribución .00 .00 .01 .99 .00
+Las subdivisiones finales emplean genes adicionales para maximizar la pureza de clasificación:
+-- EIF6 < 7 separa un subgrupo de CFB (35% del total, pureza .00 .98 .01 .01 .00) de un pequeño nodo HPB (1% del total, pureza .12 .00 .12 .00 .75).
+-- DECR2 >= 9.8 distingue entre un nodo CGC (21% del total, pureza .00 .11 .86 .03 .04) y un nodo HPB terminal (8% del total, pureza perfecta .00 .00 .00 .00 1.00).
+-- MACC1 < 8.1 realiza la última discriminación, separando CFB (2% del total, pureza .00 .86 .07 .07 .00) de CGC (18% del total, pureza .00 .01 .92 .02 .05).
+En conclusión, el modelo consigue discriminar clarmente enre grupos según la expresión génica.
 
 ◦ ¿Habéis considerado oportuno implementar algún método de reducción de dimensionalidad para procesar los datos antes de implementarlos en dichas técnicas? ¿Por qué?. 
 Es conveniente aplicar la reducción de dimensionalidad cuando el número de muestras del que se parte es 10 veces mayor que el número de variables a analizar. 
