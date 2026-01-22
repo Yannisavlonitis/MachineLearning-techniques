@@ -1,0 +1,804 @@
+---
+title: Actividad 3. Análisis de un conjunto de datos de origen biológico mediante
+  técnicas de machine learning supervisadas y no supervisadas
+author: "Rita Pellissa Valera, Samuel Pintos González, Tamara Noya Mosquera, Vanesa
+  de las Heras Hermosilla, Virginia García-Loygorri Arias, Yannis Avlonitis Egea"
+date: "2026-01-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+options(warn=-1)
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE) #Elimina mensajes de warning para que quede más limpio
+
+```
+
+
+# Preparación del entorno
+
+```{r}
+rm(list=ls()) # Limpiar entorno
+
+setwd("C:/Users/LG/Documents/BIOINFO UNIR/Algoritmos e IA/actividad grupal")
+```
+
+
+
+# Carga de datos
+
+```{r}
+# Usamos check.names = FALSE para que los nombres de los genes se mantengan exactos
+gene_exp <- read.csv("gene_expression.csv", sep = ";", header = FALSE)
+genes <- read.table("column_names.txt", stringsAsFactors = FALSE)$V1
+metadata <- read.csv("classes.csv", sep = ";", header = FALSE, col.names = c("SampleID", "Clase"))
+
+# Asignación de nombres de genes a las columnas y IDs de muestras a las filas
+colnames(gene_exp) <- genes
+rownames(gene_exp) <- metadata$SampleID
+
+# Se añade la columna de clase al final
+df_final <- gene_exp
+df_final$Clase <- metadata$Clase
+
+# Verificamos el resultado
+dim(df_final)      # Debería ser [801 filas x 501 columnas]
+head(df_final[, 1:5]) # Ver las primeras 5 columnas (genes)
+
+View(df_final)
+
+```
+
+
+
+# Carga de las librerías
+
+```{r}
+library(factoextra)  # WARD
+library(cluster)     # DIANA
+library(RDRToolbox)  # LLE
+library(Rtsne)       # t-SNE
+library(uwot)        # UMAP
+library(ggplot2)
+library(dplyr)
+library(stats)
+library(ggdendro)
+library(gridExtra)
+library(pheatmap)
+library(caret)       # para knn, gbm, LDA, decision tree y partición de datos y matriz de confusion
+library(MASS)        # Para LDA
+library(gbm)         # Para GBM
+library(rpart)       # Para decision tree
+library(rpart.plot)  # Para decision tree
+library(pROC)
+
+```
+
+
+
+
+# Métodos de aprendizaje no supervisado de reducción de la dimensionalidad:
+
+*1. T-DISTRIBUTED STOCHASTIC NEIGHBOR EMBADDING (t-SNE)*
+
+```{r}
+
+# Preparamos los datos: eliminamos la columna 'Clase' para el cálculo y nos aseguramos de que no haya filas duplicadas (t-SNE falla si las hay)
+data_matrix <- as.matrix(df_final[, -ncol(df_final)]) 
+labels <- df_final$Clase
+
+# Ejecutamos t-SNE
+# perplexity: suele ser entre 5 y 50 (depende del tamaño de tu muestra, 801 filas)
+set.seed(42) # Para que el resultado sea reproducible
+tsne_out <- Rtsne(X = data_matrix, dims = 2, perplexity = 30, verbose = TRUE, check_duplicates = FALSE)
+
+# Creamos el dataframe para graficar
+tsne_result <- data.frame(X1 = tsne_out$Y[,1], X2 = tsne_out$Y[,2], Grupo = labels)
+
+# Graficamos con ggplot2
+TSNE_plot <- ggplot(tsne_result, aes(x = X1, y = X2, color = Grupo)) +
+  geom_point(size = 2, alpha = 0.7) +
+  scale_color_brewer(palette = "Set1") + # Paleta automática para las clases de cáncer
+  labs(title = "t-SNE - Tipos de Cáncer", 
+       x = "Dimensión 1", y = "Dimensión 2", color = "Clase") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+TSNE_plot
+
+
+ggsave(
+  filename = "TSNE.png",  # nombre del archivo
+  plot = TSNE_plot,       # objeto ggplot
+  width = 8, height = 6, dpi = 300
+)
+
+
+```
+
+
+
+
+*2. UNIFORM MANIFOLD APPROXIMATION AND PROJECTION (UMAP)*
+
+```{r}
+
+# Imputamos los NA por la media de cada gen
+data_imputed <- df_final
+for (i in 1:(ncol(data_imputed)-1)) {
+  data_imputed[is.na(data_imputed[, i]), i] <- 
+    mean(data_imputed[, i], na.rm = TRUE)
+}
+
+# Escalamos los datos
+data_scaled <- scale(data_imputed[, -ncol(data_imputed)])
+
+# Eliminamos columnas que hayan quedado con NA tras el escalado
+data_scaled <- data_scaled[, colSums(is.na(data_scaled)) == 0]
+
+# Ejecutamos UMAP 
+set.seed(123)
+umap_results <- umap(
+  data_scaled,
+  n_neighbors = round(0.2 * nrow(data_scaled)),
+  n_components = 2,
+  min_dist = 0.1,
+  local_connectivity = 1,
+  ret_model = TRUE
+)
+
+umap_df <- data.frame(
+  UMAP1 = umap_results$embedding[,1],
+  UMAP2 = umap_results$embedding[,2],
+  Clase = df_final$Clase
+)
+
+# Visualización
+UMAP_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = Clase)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  labs(title = "UMAP de expresión génica",
+       x = "UMAP1", y = "UMAP2")
+
+
+UMAP_plot
+
+
+ggsave(
+  filename = "UMAP.png",   # nombre del archivo
+  plot = UMAP_plot,        # objeto ggplot
+  width = 8, height = 6, dpi = 300
+)
+```
+
+
+
+
+
+# Métodos de aprendizaje no supervisado de clusterización:
+
+*1. CLUSTERING JERÁRQUICO DIVISIVO: DIANA*
+
+```{r}
+
+# Separar datos numéricos
+df_mat <- as.matrix(df_final[, -ncol(df_final)])  # Todas las columnas excepto la última (Clase)
+
+# Implementación del clustering divisivo - euclidean
+diana_euclidean <- diana(df_mat, metric = "euclidean", stand = FALSE)
+
+# Visualización
+colors <- rainbow(5)
+clust_diana_euclidean <- fviz_dend(diana_euclidean, 
+                                   cex = 0.5,          # tamaño general del texto
+                                   k = 5,              # numero de grupos
+                                   palette = colors, 
+                                   lwd = 0.5,          # hacer mas finas las lineas del dendrograma
+                                   rect = 5,           # pone cuadrados punteados al rededor de cada grupo (k)
+                                   main = 'Euclidean',
+                                   xlab = "Índice de Observaciones",
+                                   ylab = "Distancia") + 
+  theme_classic()
+
+
+clust_diana_euclidean 
+
+
+ggsave(
+  filename = "Diana_Euc.png",        # nombre del archivo
+  plot = clust_diana_euclidean,      # objeto ggplot
+  width = 12, height = 5, dpi = 300
+)
+
+```
+
+
+
+*2. CLUSTERING JERÁRQUICO AGLOMERATIVO: WARD*
+
+```{r}
+
+# Separar datos numéricos
+df_mat <- as.matrix(df_final[, -ncol(df_final)])  # Todas las columnas excepto la última (Clase)
+
+# Imputamos los NA por la media de cada gen
+for (i in 1:ncol(df_mat)) {
+  df_mat[is.na(df_mat[, i]), i] <- mean(df_mat[, i], na.rm = TRUE)
+}
+
+# Escalamos los datos
+df_scaled <- scale(df_mat)
+
+# Eliminamos columnas que hayan quedado con NA tras el escalado
+df_scaled <- df_scaled[, colSums(is.na(df_scaled)) == 0]
+
+# Calculamos la matriz de distancias (euclídea)
+dist_matrix <- dist(df_scaled, method = "euclidean")
+
+# Clustering jerárquico con Ward
+hclust_ward <- hclust(dist_matrix, method = "ward.D2")
+
+# Visualización
+colors <- rainbow(5)
+clust_ward <- fviz_dend(hclust_ward,
+                        cex = 0.5,         # tamaño general del texto
+                        k = 5,             # numero de grupos
+                        palette = colors, 
+                        lwd = 0.5,         # hacer mas finas las lineas del dendrograma
+                        rect = 5,          # pone cuadrados punteados al rededor de cada grupo (k)
+                        main = 'Ward',
+                        xlab = "Índice de Observaciones",
+                        ylab = "Distancia") + 
+  theme_classic()
+
+
+clust_ward
+
+
+ggsave(
+  filename = "Ward.png", # nombre del archivo
+  plot = clust_ward,     # objeto ggplot
+  width = 12, height = 5, dpi = 300
+)
+
+```
+
+
+
+
+# Métodos de aprendizaje supervisado:
+
+*Preparación de los datos*
+
+```{r}
+# Limpiar nombres de las columnas
+colnames(df_final) <- make.names(colnames(df_final))
+
+# Convertimos clase a factor
+df_final$Clase <- as.factor(df_final$Clase)
+
+# Fijamos  semilla para reproducibilidad 
+set.seed(42) 
+
+# Hacemos la partición de datos (80% entrenamiento, 20% prueba)
+train_index <- createDataPartition(df_final$Clase, p = 0.8, list = FALSE)
+
+train_data <- df_final[train_index, ]
+test_data <- df_final[-train_index, ]
+
+
+# Verificación de la partición de datos
+# Frecuencias y proporciones para training
+train_tab <- table(train_data$Clase)
+train_prop <- prop.table(train_tab)
+
+# Frecuencias y proporciones para testing
+test_tab <- table(test_data$Clase)
+test_prop <- prop.table(test_tab)
+
+# Creamos tabla combinada para comparar si ambas partes tienen la misma proporcion de datos
+summary_table <- data.frame(
+  Clase = names(train_tab),  # asumimos que ambas tablas tienen las mismas clases
+  Train_Frecuencia = as.vector(train_tab),
+  Train_Porcentaje = round(100 * as.vector(train_prop), 2),
+  Test_Frecuencia = as.vector(test_tab),
+  Test_Porcentaje = round(100 * as.vector(test_prop), 2)
+)
+
+print(summary_table)
+
+```
+
+
+
+*1. K-NEAREST NEIGHBORS (KNN)*
+
+```{r}
+
+# ----------- Modelo knn -----------
+
+set.seed(42)
+
+knnModel <- train(Clase ~ .,
+                  data = train_data,
+                  method = "knn",
+                  trControl = trainControl(method = "cv", number = 10),
+                  preProcess = c("zv", "center", "scale"),
+                  tuneLength = 30)
+plot(knnModel)
+
+
+# Extraer y mostrar el mejor k automáticamente
+mejor_k_knn <- knnModel$bestTune 
+print(paste("El modelo KNN ha seleccionado automáticamente el valor óptimo de k =", mejor_k_knn))
+
+
+# Importancia de variables (Genes más relevantes)
+importancia_knn <- varImp(knnModel, scale = TRUE)
+
+# Representación de los 10 genes con mayor poder predictivo
+plot(importancia_knn, top = 10, main = "Top 10 Genes - Importancia KNN")
+
+
+# Realizar predicciones en el conjunto de prueba utilizando el modelo entrenado
+
+# El modelo kNN calcula la distancia entre el punto test y todos los puntos de
+# entrenamiento, ordenando las distancias y seleccionando los k vecinos mas
+# cercanos para cada punto. Finalmente, asigna la etiqueta al punto basandose
+# en la mayoria de etiquetas de entre sus vecinos
+
+set.seed(42)
+
+predictions_knn <- predict(knnModel, newdata = test_data )
+
+
+# ----------- Evaluación del modelo -----------
+
+# Evaluar la precisión del modelo gracias a la matriz de confusión
+conf_knn <- confusionMatrix(predictions_knn, test_data$Clase)
+conf_knn
+
+#Accuracy : 0.9937, muy buen modelo
+
+# Obtener probabilidades, util para curvas ROC
+prob_knn <- predict(knnModel, newdata = test_data, type = "prob")
+prob_knn
+
+```
+
+
+
+*2. LINEAR DISCRIMINANT ANALYSIS (LDA)*
+
+Para construir este modelo, hay que relacionar varibles como el radius, compactness... con B (benigno) o M (metastasico), es decir, se va a intentar entrenar un modelo que pueda predecir la malignidad de un tumor a partir de variables observadas. Los predicores (X) van a ser las medidas de los tumores, y el vector respuesta Y (la malignidad) X = MEDIDAS Y = DIAGNOSIS para el training testing 
+
+```{r}
+
+# ----------- Tratamiento de variables problemáticas -----------
+
+# Identificar variables con varianza cero (constantes), no aportan información discriminante
+var_no_cero <- apply(train_data[, -ncol(train_data)], 2, var) != 0
+
+# Mostrar qué variables tienen varianza cero
+variables_cero <- names(var_no_cero)[!var_no_cero]  # !var_no_cero = varianza = 0
+print("Variables con varianza cero (constantes):")
+print(variables_cero)
+
+# Data filtrada (solo variables con varianza)
+train_filtered <- train_data[, var_no_cero]
+test_filtered <- test_data[, var_no_cero]
+
+# Limpiar nombres de columnas (eliminar guiones y caracteres problemáticos)
+colnames(train_filtered) <- make.names(colnames(train_filtered))
+colnames(test_filtered) <- make.names(colnames(test_filtered))
+
+# Añadir la clase de nuevo
+train_filtered$Clase <- train_data$Clase
+test_filtered$Clase <- test_data$Clase
+
+
+# ----------- Escalado de variables -----------
+
+# Extraer solo columnas numéricas
+numerical_cols_train <- train_filtered[, sapply(train_filtered, is.numeric)]
+numerical_cols_test <- test_filtered[, sapply(test_filtered, is.numeric)]
+
+# Escalar: centrar y reducir (se usan los parámetros del training para escalar el test)
+train_means <- colMeans(numerical_cols_train)
+train_sds <- apply(numerical_cols_train, 2, sd)
+
+scaled_train <- scale(numerical_cols_train, center = train_means, scale = train_sds)
+scaled_test <- scale(numerical_cols_test, center = train_means, scale = train_sds)
+
+# Reconstruir datasets
+train_lda <- as.data.frame(scaled_train)
+train_lda$Clase <- train_filtered$Clase
+
+test_lda <- as.data.frame(scaled_test)
+test_lda$Clase <- test_filtered$Clase
+
+
+# ----------- Construcción de la fórmula -----------
+
+genes <- colnames(train_lda)[1:(ncol(train_lda)-1)]
+formula_lda <- as.formula(paste("Clase ~", paste(genes, collapse = "+")))
+
+
+# ----------- Modelo LDA -----------
+set.seed(42) 
+
+lda_model <- lda(formula_lda, data = train_lda)
+
+# Predicciones en conjunto de prueba
+lda_predictions <- predict(lda_model, newdata = test_lda)
+
+# Clases predichas vs reales
+predicted_lda <- lda_predictions$class
+true_classes <- test_lda$Clase
+
+# Matriz de confusión
+conf_lda <- confusionMatrix(predicted_lda, true_classes)
+conf_lda
+
+# Guardar métricas
+accuracy_lda <- conf_lda$overall['Accuracy']
+kappa_lda <- conf_lda$overall['Kappa']
+
+# Obtener probabilidades
+prob_LDA <- predict(lda_model, newdata = test_lda)$posterior
+head(prob_LDA)
+
+
+# ----------- Visualización LDA -----------
+
+# Proyección LDA del conjunto de entrenamiento
+lda_proj <- predict(lda_model)$x
+lda_data <- cbind(train_lda, lda_proj)
+
+# Determinar número de funciones discriminantes
+num_lds <- ncol(lda_proj)
+
+# Gráfico LDA (bidimensional si hay LD1 y LD2)
+if(num_lds >= 2) {
+  
+  plot_lda <- ggplot(lda_data, aes(x = LD1, y = LD2, color = Clase)) +
+    geom_point(size = 2.5, alpha = 0.7) +
+    stat_ellipse(level = 0.95, linetype = 2) + # Elipses de confianza
+    scale_color_manual(values = c("red", "blue", "green", "orange", "purple")) +
+    labs(title = "LDA - Separación de Tipos de Cáncer",
+         subtitle = sprintf("Accuracy: %.2f%% | Kappa: %.3f", 
+                            accuracy_lda*100, kappa_lda),
+         x = "LD1 (Primera función discriminante)",
+         y = "LD2 (Segunda función discriminante)",
+         color = "Tipo de Cáncer") +
+    theme_classic() +
+    theme(
+      panel.grid.major = element_line(color = "gray90"),
+      panel.background = element_rect(fill = "gray95"),
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+      plot.subtitle = element_text(hjust = 0.5, size = 10)
+    )
+  
+  print(plot_lda)
+  
+  ggsave(
+    filename = "LDA_Cancer_Types.png",
+    plot = plot_lda,
+    width = 10, height = 7, dpi = 300
+  )
+  
+} else {
+  
+  # Gráfico unidimensional si solo hay LD1
+  plot_lda <- ggplot(lda_data, aes(x = LD1, y = 0, color = Clase)) +
+    geom_jitter(height = 0.05, size = 2.5, alpha = 0.7) +
+    scale_color_manual(values = c("red", "blue", "green", "orange", "purple")) +
+    labs(title = "LDA - Separación de Tipos de Cáncer (1D)",
+         subtitle = sprintf("Accuracy: %.2f%% | Kappa: %.3f", 
+                            accuracy_lda*100, kappa_lda),
+         x = "LD1 (Primera función discriminante)",
+         y = "",
+         color = "Tipo de Cáncer") +
+    theme_classic() +
+    theme(
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+      plot.subtitle = element_text(hjust = 0.5, size = 10)
+    )
+  
+  print(plot_lda)
+  
+  ggsave(
+    filename = "LDA_Cancer_Types_1D.png",
+    plot = plot_lda,
+    width = 10, height = 4, dpi = 300
+  )
+}
+
+
+# ----------- Análisis de genes más importantes -----------
+
+# Top 10 genes en LD1
+ld1_weights <- abs(lda_model$scaling[, 1])
+top_ld1 <- sort(ld1_weights, decreasing = TRUE)[1:10]
+
+print(top_ld1)
+
+if(num_lds >= 2) {
+  # Top 10 genes en LD2
+  ld2_weights <- abs(lda_model$scaling[, 2])
+  top_ld2 <- sort(ld2_weights, decreasing = TRUE)[1:10]
+  
+  print(top_ld2)
+}
+
+
+# ----------- Curva de separación entre grupos -----------
+
+# Gráfico de densidad para cada función discriminante por clase
+if(num_lds >= 1) {
+  
+  plot_density_ld1 <- ggplot(lda_data, aes(x = LD1, fill = Clase)) +
+    geom_density(alpha = 0.5) +
+    scale_fill_manual(values = c("red", "blue", "green", "orange", "purple")) +
+    labs(title = "Distribución de LD1 por Tipo de Cáncer",
+         x = "LD1",
+         y = "Densidad",
+         fill = "Tipo de Cáncer") +
+    theme_classic() +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold")
+    )
+  
+  print(plot_density_ld1)
+  
+  ggsave(
+    filename = "LDA_LD1_Density.png",
+    plot = plot_density_ld1,
+    width = 10, height = 6, dpi = 300
+  )
+}
+
+
+
+```
+
+
+
+*3. GRADIENT BOOSTING MACHINE (GBM)*
+
+```{r}
+
+# ----------- Modelo GBM -----------
+
+gbm_model <- train(
+  Clase ~ ., 
+  data = train_data,
+  method = "gbm",
+  trControl = trainControl(method = "cv", number = 5), # Reducido a 5 para ganar velocidad
+  preProcess = c("center", "scale"), # Normalización
+  tuneLength = 5,  # Prueba 5 valores impares diferentes de 'k' (pocos para ganar velocidad)
+  verbose = FALSE
+)
+
+
+# Resumen del modelo entrenado
+print(gbm_model)
+plot(gbm_model)
+
+mejor_k_gbm <- gbm_model$bestTune # Extraer y mostrar el mejor k automáticamente
+print(paste("El Modelo GBM ha seleccionado automáticamente el valor óptimo de k =", mejor_k_gbm))
+
+
+# Importancia de variables (Genes más relevantes)
+importancia_gbm <- varImp(gbm_model, scale = TRUE)
+
+# Representación de los 10 genes con mayor poder predictivo
+plot(importancia_gbm, top = 10, main = "Top 10 Genes - Importancia GBM")
+
+
+
+# ----------- Predicciones y evaluación en el conjunto de prueba -----------
+
+# Predicción de etiquetas
+predicted_gbm <- predict(gbm_model, newdata = test_data)
+
+# Matriz de confusión para ver sensibilidad y especificidad
+conf_gbm <- confusionMatrix(predicted_gbm, as.factor(test_data$Clase))
+conf_gbm
+
+# Probabilidades de clase (para curvas ROC)
+prob_gbm <- predict(gbm_model, newdata = test_data, type = "prob")
+head(prob_gbm)
+
+
+```
+
+
+
+
+*CURVAS ROC:*
+
+```{r}
+
+# multiclass.roc calcula la curva ROC promedio para clasificación multiclase
+# no puede ser roc normal, debido hay más de una clase (no binomial)
+roc_knn <- multiclass.roc(test_data$Clase, prob_knn)
+roc_LDA <- multiclass.roc(test_lda$Clase, prob_LDA)
+roc_gbm <- multiclass.roc(test_data$Clase, prob_gbm)
+
+# Tabla de AUCs de los métodos seleccionados
+tabla_auc_seleccionados <- data.frame(
+  Modelo = c("KNN", "LDA", "GBM"),
+  AUC = c(as.numeric(roc_knn$auc),
+          as.numeric(roc_LDA$auc),
+          as.numeric(roc_gbm$auc))
+)
+
+tabla_auc_seleccionados
+
+```
+
+
+*ROC One-vs-Rest por clase*
+Para problemas multiclase es útil ver ROC para cada clase individual
+
+```{r}
+
+# Obtener nombres de clases
+clases <- levels(test_data$Clase)
+
+# Función para calcular ROC One-vs-Rest
+roc_por_clase <- function(prob_matrix, true_labels, clases) {
+  lapply(clases, function(clase) { 
+    roc(response = true_labels == clase, # Cada clase se toma como "positiva" y el resto como "negativa"
+        predictor = prob_matrix[, clase])
+  }) -> roc_list
+  names(roc_list) <- clases
+  return(roc_list)
+}
+
+# Calcular ROC One-vs-Rest para cada modelo
+roc_knn_list <- roc_por_clase(prob_knn, test_data$Clase, clases)
+roc_LDA_list <- roc_por_clase(prob_LDA, test_lda$Clase, clases)
+roc_gbm_list <- roc_por_clase(prob_gbm, test_data$Clase, clases)
+
+
+# ----------- Graficar ROC One-vs-Rest por clase -----------
+
+# Definir colores para cada modelo
+colores <- c(KNN="#377EB8", LDA="#4DAF4A", GBM="#E41A1C")
+
+# Graficar una figura por clase
+for(clase in clases){
+  
+  # Graficar ROC del modelo KNN
+  plot(roc_knn_list[[clase]], col=colores["KNN"], lwd=2,
+       main=paste("Curvas ROC One-vs-Rest - Clase:", clase))
+  plot(roc_LDA_list[[clase]], col=colores["LDA"], lwd=2, add=TRUE)
+  plot(roc_gbm_list[[clase]], col=colores["GBM"], lwd=2, add=TRUE)
+  
+  legend("bottomright",
+         legend=c(
+           paste0("KNN (AUC=", round(auc(roc_knn_list[[clase]]),3), ")"),
+           paste0("LDA (AUC=", round(auc(roc_LDA_list[[clase]]),3), ")"),
+           paste0("GBM (AUC=", round(auc(roc_gbm_list[[clase]]),3), ")")
+         ),
+         col=colores, lwd=2)
+  abline(0,1, lty=2, col="darkgrey") # Línea diagonal de referencia (clasificador aleatorio)
+}
+
+
+# ----------- Tabla con AUC por clase -----------
+
+# Extraer AUC de cada ROC One-vs-Rest
+auc_knn <- sapply(roc_knn_list, auc)
+auc_LDA <- sapply(roc_LDA_list, auc)
+auc_gbm <- sapply(roc_gbm_list, auc)
+
+# Crear tabla comparativa
+tabla_auc_binaria <- data.frame(
+  Clase = clases,
+  KNN = auc_knn,
+  LDA = auc_LDA,
+  GBM = auc_gbm
+)
+
+# Mostrar tabla
+print(tabla_auc_binaria)
+
+```
+
+
+
+
+# RESOLUCIÓN DE PREGUNTAS
+
+## *Pregunta 1:* Procesamiento de los datos:
+
+*¿Qué método habéis escogido para llevar a cabo la imputación de los datos? Razonad vuestra respuesta*
+
+Primeramente, verificamos la existencia de valores ausentes (NAs), confirmando que el dataset estaba completo. Seguidamente, identificamos y gestionamos las variables con varianza cero durante el preprocesamiento, ya que variables constantes provocan errores matemáticos (división por cero) al intentar escalar los datos para los modelos algorítmicos.
+
+
+*¿Habéis llevado a cabo algún otro tipo de procesamiento? Razonad vuestra respuesta*
+
+Se ha realizado un escalado y centrado de los datos, transformando las  variables para que tengan media 0 y desviación estándar 1. Esto garantiza que todas las tengan el mismo peso en la decisión de los modelos tanto supervisados como no supervisados, independientemente de sus unidades biológicas originales.
+
+
+
+## *Pregunta 2:* Métodos no supervisados:
+
+*¿Cuál es el motivo por el cual habéis seleccionado estas técnicas de reducción de dimensionalidad?*
+
+En esta fase, se evaluaron diversas técnicas de proyección, incluyendo métodos lineales como PCA y algoritmos de aprendizaje de variedades como LE, LLE e Isomap. Tras analizar las proyecciones en dos dimensiones, observamos que PCA resultó insuficiente al mostrar solapamiento de los grupos debido a la naturaleza no lineal de los datos de expresión. Asimismo, Isomap y LLE fallaron en la segregación de las poblaciones, manteniendo grupos críticos (como CFB, CGC, CHC y HPB) solapados, mientras que LE, separaba grupos con una k=20%, pero no lograba la mejor resolución para la interpretación.
+
+   • El método t-SNE (t-Distributed Stochastic Neighbor Embedding) se seleccionó por su capacidad para preservar la         estructura local mediante una distribución t de Student. Su objetivo principal fue la exploración visual para          identificar subpoblaciones en el dataset.
+        o	Puntos Positivos: Es excepcionalmente eficaz para eliminar el solapamiento y definir fronteras nítidas entre           condiciones, transformando similitudes biológicas en distancias visuales claras y manejando con éxito la no            linealidad.
+        o	Puntos Negativos: Es un método no determinista y computacionalmente costoso. Además, tiende a expandir los             clústeres densos y comprimir los dispersos, lo que puede distorsionar la interpretación de los tamaños                 relativos de los grupos.
+        
+   •	El método UMAP (Uniform Manifold Approximation and Projection) se eligió para obtener una reducción que no solo        separara los grupos, sino que mantuviera la topología global de los datos. Es ideal cuando se requiere                 escalabilidad y reproducibilidad en el análisis.
+        o	Puntos Positivos: Ofrece una mayor velocidad de ejecución y una mejor preservación de las distancias                   inter-clúster, permitiendo que la disposición espacial informe sobre la jerarquía y relación real entre las            muestras.
+        o	Puntos Negativos: Presenta una alta sensibilidad a los hiperparámetros (como el número de vecinos), y su               fundamentación matemática topológica puede ser más compleja de interpretar.
+        
+La elección de estas dos técnicas se justifica porque son las únicas que logran transformar las similitudes biológicas en distancias visuales discretas en 2D. Ambas informan con precisión sobre la existencia de clústeres bien diferenciados entre grupos.
+
+
+*¿Cuál es el motivo por el cual habéis seleccionado estas técnicas de clusterización?*
+
+En esta fase, se evaluaron diversos algoritmos jerárquicos (Single, Average, Complete, Ward y DIANA) y de partición (K-means). Tras analizar los dendrogramas y la cohesión de los grupos, observamos que los métodos de enlace simple (Single) y promedio (Average) fallaban al intentar definir fronteras claras, presentando un fenómeno de "encadenamiento" donde las muestras se agrupaban de forma asimétrica. Por el contrario, los métodos seleccionados permitieron una estructuración mucho más robusta.
+
+    •	El método de Ward (Jerárquico Aglomerativo se seleccionó por su enfoque en la minimización de la varianza dentro       de cada clúster. Es ideal para datos de expresión génica donde se busca que las muestras dentro de un grupo sean       lo más homogéneas posible.
+        o	Puntos Positivos: Genera clústeres muy compactos, equilibrados en tamaño y con una estructura jerárquica muy           clara, lo que facilita enormemente la interpretación biológica de los subtipos.
+        o	Puntos Negativos: Suposiciones sobre la Distribución: Asume que los datos están distribuidos uniformemente,            lo que puede no ser cierto en todos los casos y tiene limitaciones en la interpretación, si los clústeres no           son claramente diferenciables.
+        
+    •	El método DIANA (Divisivo Analysis Clustering), a diferencia de los métodos aglomerativos, DIANA sigue una             comenzando con un solo clúster que contiene todas las muestras y dividiéndolo sucesivamente. Se eligió para            validar la estructura jerárquica desde una perspectiva global.
+        o	Puntos Positivos: Es excelente para identificar las divisiones principales y más robustas del dataset. Al              enfocarse en las grandes diferencias iniciales, aporta una visión muy clara de las jerarquías superiores de            los datos.
+        o	Puntos Negativos: Es computacionalmente costoso en conjuntos de datos grandes debido a su naturaleza                   divisiva, y es muy sensible al ruido, por lo cual puede verse afectado por datos atípicos, lo que puede                distorsionar la segmentación.
+
+
+*En el caso de la clusterización, ¿podéis afirmar con certeza que los clústeres generados son los mejores posibles? Razonad vuestra respuesta.*
+
+Es complicado afirmar con certeza que los clústeres generados son los mejores posibles, debido a que nuestra decisión se basa principalmente en la inspección visual de los dendrogramas. Ward y DIANA mostraron una separación muy clara entre las ramas y bastante similar. Esta visualización nos proporcionó una intuición inmediata sobre la calidad del agrupamiento, permitiéndonos identificar clústeres con una cohesión interna muy fuerte y una separación evidente frente a los demás grupos.
+Aun así, son métodos no supervisados, y no se dispone de etiquetas reales, por eso la calidad de un clúster es relativa. Un agrupamiento puede ser óptimo matemáticamente según una métrica pero no tener sentido biológico. Hasta que no se realiza una validación biológica, los clústeres son solo hipótesis estadísticas.
+Además los resultados están condicionados al uso de la distancia euclídea/Manhattan y por eso son dependientes de la métrica. El uso de otras distancias podrían derivar en clústeres diferentes pero igualmente válidos.
+Por esto, aunque de los métodos analizados son las mejores opciones, podría haber algún método de clusterización que fuera aún más óptimo (sobretodo si hay supervisión). 
+
+
+
+## *Pregunta 3:* Métodos supervisados:
+
+*¿Cuál es el motivo por el cual habéis seleccionado esas técnicas de aprendizaje supervisado? ¿Cuál ha dado mejores resultados a la hora de clasificar las muestras? Razonad vuestra respuesta.*
+
+Tras analizar varios métodos de aprendizaje supervisado, se han seleccionado determinados modelos por dos motivos principales: 
+   • El resultado de la comparación de métodos mediante gráficas ROC, que relacionan el equilibrio entre la detección       de verdaderos positivos y la evitación de falsos positivos.
+   • La calidad del algoritmo, que queda plasmada en las matrices de confusión.
+   
+En cuanto a la matriz de confusión, los métodos elegidos han sido aquellos con mayor accuracy en comparación con los demás, siendo capaces de clasificar correctamente cerca del 98% de las muestras. Asimismo, al observar la gráfica ROC, se aprecia que todos los métodos de aprendizaje supervisado presentan una gran efectividad y una proporción de verdaderos positivos mucho mayor que la de falsos positivos, salvo el método GBM, que muestra un rendimiento inferior.
+
+Tras el análisis de las matrices de confusión, se ha considerado que K-NN, LDA y DT son los métodos que mejor identifican los tumores en función de la expresión diferencial de los genes, ya que presentan muy pocos o ningún falso positivo y/o negativo. Además, los valores de precisión son elevados (Accuracy K-NN: 0.9937, LDA:0.9874 y GMB:0.979), los intervalos de confianza son bastante ajustados (K-NN:0.9655, 0.9998; LDA:0.9553, 0.9985 y GMB:0.9517,0.9931) y la concordancia entre predicciones es alta (Kappa K-NN:0.9917, LDA:0.9834 y GMB:0.9721).
+
+
+*¿Habéis considerado oportuno implementar algún método de reducción de dimensionalidad para procesar los datos antes de implementarlos en dichas técnicas? ¿Por qué?*
+
+Es conveniente aplicar la reducción de dimensionalidad cuando el número de muestras del que se parte es 10 veces mayor que el número de variables a analizar. 
+En nuestro ejercicio se partía de 800 muestas y 500 genes.
+
+
+*¿Qué aspectos positivos y negativos tienen cada una de las técnicas que habéis escogido?*
+
+K-NN no construye un modelo sino que revisa datos, busca entre los k vecinos mas similares y asigna una etiqueta que luego usa para etiquetar nuevos datos. Este algoritmo es muy simple de comprender y de implementar. Al no construir un modelo es poco costoso computacionalmente. Esto también facilita que pueda responder de manera rápida ante cambios en  entradas de datos. Entre sus desventajas está la selección del valor K que muchas veces se realiza de manera arbitraia y que la etapa de clasificación puede ser especialmente lenta a medida que aumenta el tamaño de los datos. Además este algoritmo no puede manejar datos faltantes y, sin un procesamiento previo, tampoco datos nominales o atípicos. Por concluir con las desventajas, no muestra un buen rendimiento en el caso de datos desequilibrados.
+
+Comparando el método LDA con la regresión logística presenta dos ventajas, por un lado que las clases estén bien separadas, no aporta inestabilidad a los parámetros estimados y por otro lado, para un bajo número de observaciones  este método es más estable. Como desventaja podemos destacar que requiere una distribución normal de los datos e igualdad de varianzas
+
+El algoritmo GBM va construyendo un conjunto de árboles débiles de manera sucesiva para combinarlos, reducir el error y generar un modelo más preciso. Ventajas: ofrece muchas opciones de ajuste de hiperparámetros lo que hace que sea un algorimo muy flexible. Funciona muy bien con datos categóricos y numéricos y faltantes sin necesidad de procesar o imputar los datos. Por otro lado, a parte de que es costoso computacionalemnte, el hecho de que este algoritmo sigue trabajando para minimizar todos los errores conlleva el riesgo de que enfatice demasiado los valores atípicos y produzca sobreajuste
+
+
+
+## *Pregunta 4:* 
+
+Pese a que la opción a (red de perceptones) es la opción clásica cuando comparamos muestras con genes, esta opción ignora las interacciones entre genes. Las redes convolucionales se usan para datos como imágenes y las redes recurrentes para secuencias como texto y audio. 
+
+Sin embargo, la opción d (redes de grafos) es la decisión más adecuada, ya que los genes no funcionan aislados, sino que forman parte de rutas regulatorias y rutas metabólicas. Las redes de grafos utilizan la información de un vecino y la compara entre el resto de sus vecinos. Estas utilizan relaciones no lineales, lo que permiten integrar la información de los genes (serían los nodos del modelo), como la interacción entre estos (que serían las aristas del modelo). Las redes de grafos además permiten aislar el ruido frente a otras opciones como las redes recurrentes.
+
