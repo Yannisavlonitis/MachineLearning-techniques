@@ -26,7 +26,6 @@ caption, .caption {
 knitr::opts_chunk$set(echo = TRUE,	message = FALSE,	warning = FALSE, fig.align = "center")
 ```
 
-
 # Carga de datos
 
 ```{r carga de datos}
