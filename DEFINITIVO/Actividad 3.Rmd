@@ -22,16 +22,18 @@ caption, .caption {
 
 ```
 
+```{r}
+knitr::opts_chunk$set(echo = TRUE,	message = FALSE,	warning = FALSE, fig.align = "center")
+```
 
 # Carga de datos
 
-```{r}
-knitr::opts_chunk$set(echo = TRUE,	message = FALSE,	warning = FALSE, fig.align = "center")
+```{r carga de datos}
 
 # Usamos check.names = FALSE para que los nombres de los genes se mantengan exactos
-gene_exp <- read.csv("gene_expression.csv", sep = ";", header = FALSE)
-genes <- read.table("column_names.txt", stringsAsFactors = FALSE)$V1
-metadata <- read.csv("classes.csv", sep = ";", header = FALSE, col.names = c("SampleID", "Clase"))
+gene_exp <- read.csv("dataframe/gene_expression.csv", sep = ";", header = FALSE)
+genes <- read.table("dataframe/column_names.txt", stringsAsFactors = FALSE)$V1
+metadata <- read.csv("dataframe/classes.csv", sep = ";", header = FALSE, col.names = c("SampleID", "Clase"))
 
 # Asignación de nombres de genes a las columnas y IDs de muestras a las filas
 colnames(gene_exp) <- genes
@@ -45,10 +47,9 @@ df_final$Clase <- metadata$Clase
 ```
 
 
+Carga de las librerías
 
-# Carga de las librerías
-
-```{r}
+```{r carga de librerias}
 library(factoextra)  # WARD
 library(cluster)     # DIANA
 library(RDRToolbox)  # LLE
@@ -60,7 +61,7 @@ library(stats)
 library(ggdendro)
 library(gridExtra)
 library(pheatmap)
-library(caret)       # para knn, gbm, LDA, decision tree y partición de datos y matriz de confusion
+library(caret)       # para knn, gbm, LDA, DT y partición de datos y matriz de confusion
 library(MASS)        # Para LDA
 library(gbm)         # Para GBM
 library(rpart)       # Para decision tree
@@ -70,17 +71,31 @@ library(pROC)
 ```
 
 
+### *Pregunta 1*: Procesamiento de los datos
+
+**¿Qué método habéis escogido para llevar a cabo la imputación de los datos? Razonad vuestra respuesta**
+
+Primeramente, verificamos la existencia de valores ausentes (NAs), confirmando que el dataset estaba completo. Seguidamente, identificamos y gestionamos las variables con varianza cero durante el preprocesamiento, ya que variables constantes provocan errores matemáticos (división por cero) al intentar escalar los datos para los modelos algorítmicos.
 
 
-# Métodos de aprendizaje no supervisado de reducción de la dimensionalidad:
+**¿Habéis llevado a cabo algún otro tipo de procesamiento? Razonad vuestra respuesta**
+
+Se ha realizado un escalado y centrado de los datos, transformando las  variables para que tengan media 0 y desviación estándar 1. Esto garantiza que todas las tengan el mismo peso en la decisión de los modelos tanto supervisados como no supervisados, independientemente de sus unidades biológicas originales.
+
+
+
+
+# Métodos de aprendizaje no supervisado
+
+## Reducción de la dimensionalidad
 
 Los datos de expresión génica se caracterizan por una alta dimensionalidad, lo que dificulta su visualización y análisis. Para abordar esto, aplicamos técnicas de aprendizaje no lineal. A diferencia del PCA (lineal), métodos como t-SNE y UMAP son capaces de capturar estructuras complejas en los datos.
 
 ### 1. T-DISTRIBUTED STOCHASTIC NEIGHBOR EMBADDING (t-SNE)
 
-Se centra en preservar las relaciones de vecindad local, siendo muy bueno para la visualización de clústeres discretos
+Se centra en preservar las relaciones de vecindad local, siendo muy bueno para la visualización de clústeres discretos.
 
-```{r}
+```{r tSNE}
 
 # Preparamos los datos: eliminamos la columna 'Clase' para el cálculo y nos aseguramos de que no haya filas duplicadas
 data_matrix <- as.matrix(df_final[, -ncol(df_final)]) 
@@ -121,7 +136,7 @@ TSNE_plot
 
 Busca un equilibrio entre la estructura local y global, permitiendo una representación más fiel de la topología de los datos.
 
-```{r}
+```{r umap}
 
 # Imputamos los NA por la media de cada gen
 data_imputed <- df_final
@@ -170,7 +185,7 @@ UMAP_plot
 
 
 
-# Métodos de aprendizaje no supervisado de clusterización:
+## Clusterización
 
 El objetivo del clustering en este contexto es descubrir si las muestras se agrupan de forma natural según sus perfiles de expresión génica sin utilizar las etiquetas de clase a priori. En este caso emplearemos dos enfoques jerárquicos: Diana y Ward.
 
@@ -178,7 +193,7 @@ El objetivo del clustering en este contexto es descubrir si las muestras se agru
 
 Construye clústeres desde arriba hacia abajo (top-down), comenzando con un solo grupo que contiene todas las muestras y dividiéndolo sucesivamente en subgrupos disimilares.
 
-```{r}
+```{r Diana}
 
 # Separamos los datos numéricos
 df_mat <- as.matrix(df_final[, -ncol(df_final)])  # Todas las columnas excepto la última (Clase)
@@ -211,7 +226,7 @@ clust_diana_euclidean
 
 Funciona de abajo hacia arriba (bottom-up), fusionando las muestras más similares iterativamente intentando minimizar la varianza intra-cluster.
 
-```{r}
+```{r ward}
 
 # Imputamos los NA por la media de cada gen
 for (i in 1:ncol(df_mat)) {
@@ -251,55 +266,67 @@ clust_ward
 ```
 
 
-## *Pregunta 2:* Métodos no supervisados
+## *Pregunta 2*: Métodos no supervisados
 
-
-#### **¿Cuál es el motivo por el cual habéis seleccionado estas técnicas de reducción de dimensionalidad?**
+**¿Cuál es el motivo por el cual habéis seleccionado estas técnicas de reducción de dimensionalidad?**
 
 En esta fase, se evaluaron diversas técnicas de proyección, incluyendo métodos lineales como PCA y algoritmos de aprendizaje de variedades como LE, LLE e Isomap. Tras analizar las proyecciones en dos dimensiones, observamos que PCA resultó insuficiente al mostrar solapamiento de los grupos debido a la naturaleza no lineal de los datos de expresión. Asimismo, Isomap y LLE fallaron en la segregación de las poblaciones, manteniendo grupos críticos (como CFB, CGC, CHC y HPB) solapados, mientras que LE, separaba grupos con una k=20%, pero no lograba la mejor resolución para la interpretación.
 
-   • El método t-SNE (t-Distributed Stochastic Neighbor Embedding) se seleccionó por su capacidad para preservar la estructura local mediante una distribución t de Student. Su objetivo principal fue la exploración visual para identificar subpoblaciones en el dataset.
-      •	 Puntos Positivos: Es excepcionalmente eficaz para eliminar el solapamiento y definir fronteras nítidas entre condiciones, transformando similitudes biológicas en distancias visuales claras y manejando con éxito la no linealidad.
-      •	 Puntos Negativos: Es un método no determinista y computacionalmente costoso. Además, tiende a expandir clústeres densos y comprimir los dispersos, lo que puede distorsionar la interpretación de los tamaños relativos de los grupos.
-        
-   •	El método UMAP (Uniform Manifold Approximation and Projection) se eligió para obtener una reducción que no solo separara los grupos, sino que mantuviera la topología global de los datos. Es ideal cuando se requiere escalabilidad y reproducibilidad en el análisis.
-      •	 Puntos Positivos: Ofrece una mayor velocidad de ejecución y una mejor preservación de las distancias inter-clúster, permitiendo que la disposición espacial informe sobre la jerarquía y relación real entre las muestras.
-      •	 Puntos Negativos: Presenta una alta sensibilidad a los hiperparámetros (como el número de vecinos), y su fundamentación matemática topológica puede ser más compleja de interpretar.
+El método t-SNE (t-Distributed Stochastic Neighbor Embedding) se seleccionó por su capacidad para preservar la estructura local mediante una distribución t de Student. Su objetivo principal fue la exploración visual para identificar subpoblaciones en el dataset.
+   
+- Puntos Positivos: Es excepcionalmente eficaz para eliminar el solapamiento y definir fronteras nítidas entre condiciones, transformando similitudes biológicas en distancias visuales claras y manejando con éxito la no linealidad.
+      
+- Puntos Negativos: Es un método no determinista y computacionalmente costoso. Además, tiende a expandir clústeres densos y comprimir los dispersos, lo que puede distorsionar la interpretación de los tamaños relativos de los grupos.
+
+
+El método UMAP (Uniform Manifold Approximation and Projection) se eligió para obtener una reducción que no solo separara los grupos, sino que mantuviera la topología global de los datos. Es ideal cuando se requiere escalabilidad y reproducibilidad en el análisis.
+
+- Puntos Positivos: Ofrece una mayor velocidad de ejecución y una mejor preservación de las distancias inter-clúster, permitiendo que la disposición espacial informe sobre la jerarquía y relación real entre las muestras.
+
+- Puntos Negativos: Presenta una alta sensibilidad a los hiperparámetros (como el número de vecinos), y su fundamentación matemática topológica puede ser más compleja de interpretar.
         
 La elección de estas dos técnicas se justifica porque son las únicas que logran transformar las similitudes biológicas en distancias visuales discretas en 2D. Ambas informan con precisión sobre la existencia de clústeres bien diferenciados entre grupos.
 
 
 
-#### **¿Cuál es el motivo por el cual habéis seleccionado estas técnicas de clusterización?**
+**¿Cuál es el motivo por el cual habéis seleccionado estas técnicas de clusterización?**
 
 En esta fase, se evaluaron diversos algoritmos jerárquicos (Single, Average, Complete, Ward y DIANA) y de partición (K-means). Tras analizar los dendrogramas y la cohesión de los grupos, observamos que los métodos de enlace simple (Single) y promedio (Average) fallaban al intentar definir fronteras claras, presentando un fenómeno de "encadenamiento" donde las muestras se agrupaban de forma asimétrica. Por el contrario, los métodos seleccionados permitieron una estructuración mucho más robusta.
 
-  •	El método de Ward (Jerárquico Aglomerativo se seleccionó por su enfoque en la minimización de la varianza dentro de cada clúster. Es ideal para datos de expresión génica donde se busca que las muestras dentro de un grupo sean lo más homogéneas posible.
-      •	 Puntos Positivos: Genera clústeres muy compactos, equilibrados en tamaño y con una estructura jerárquica muy clara, lo que facilita enormemente la interpretación biológica de los subtipos.
-      •	 Puntos Negativos: Suposiciones sobre la Distribución: Asume que los datos están distribuidos uniformemente, lo que puede no ser cierto en todos los casos y tiene limitaciones en la interpretación, si los clústeres no son claramente diferenciables.
+El método de Ward (Jerárquico Aglomerativo se seleccionó por su enfoque en la minimización de la varianza dentro de cada clúster. Es ideal para datos de expresión génica donde se busca que las muestras dentro de un grupo sean lo más homogéneas posible.
+
+- Puntos Positivos: Genera clústeres muy compactos, equilibrados en tamaño y con una estructura jerárquica muy clara, lo que facilita enormemente la interpretación biológica de los subtipos.
+
+- Puntos Negativos: Suposiciones sobre la Distribución: Asume que los datos están distribuidos uniformemente, lo que puede no ser cierto en todos los casos y tiene limitaciones en la interpretación, si los clústeres no son claramente diferenciables.
         
-  •	El método DIANA (Divisivo Analysis Clustering), a diferencia de los métodos aglomerativos, DIANA sigue una comenzando con un solo clúster que contiene todas las muestras y dividiéndolo sucesivamente. Se eligió para validar la estructura jerárquica desde una perspectiva global.
-      •	 Puntos Positivos: Es excelente para identificar las divisiones principales y más robustas del dataset. Al enfocarse en las grandes diferencias iniciales, aporta una visión muy clara de las jerarquías superiores de los datos.
-      •	 Puntos Negativos: Es computacionalmente costoso en conjuntos de datos grandes debido a su naturaleza divisiva, y es muy sensible al ruido, por lo cual puede verse afectado por datos atípicos, lo que puede distorsionar la segmentación.
+El método DIANA (Divisivo Analysis Clustering), a diferencia de los métodos aglomerativos, DIANA sigue una comenzando con un solo clúster que contiene todas las muestras y dividiéndolo sucesivamente. Se eligió para validar la estructura jerárquica desde una perspectiva global.
+
+- Puntos Positivos: Es excelente para identificar las divisiones principales y más robustas del dataset. Al enfocarse en las grandes diferencias iniciales, aporta una visión muy clara de las jerarquías superiores de los datos.
+
+- Puntos Negativos: Es computacionalmente costoso en conjuntos de datos grandes debido a su naturaleza divisiva, y es muy sensible al ruido, por lo cual puede verse afectado por datos atípicos, lo que puede distorsionar la segmentación.
 
 
 
-#### **En el caso de la clusterización, ¿podéis afirmar con certeza que los clústeres generados son los mejores posibles? Razonad vuestra respuesta.**
+**En el caso de la clusterización, ¿podéis afirmar con certeza que los clústeres generados son los mejores posibles? Razonad vuestra respuesta.**
 
 Es complicado afirmar con certeza que los clústeres generados son los mejores posibles, debido a que nuestra decisión se basa principalmente en la inspección visual de los dendrogramas. Ward y DIANA mostraron una separación muy clara entre las ramas y bastante similar. Esta visualización nos proporcionó una intuición inmediata sobre la calidad del agrupamiento, permitiéndonos identificar clústeres con una cohesión interna muy fuerte y una separación evidente frente a los demás grupos.
+
 Aun así, son métodos no supervisados, y no se dispone de etiquetas reales, por eso la calidad de un clúster es relativa. Un agrupamiento puede ser óptimo matemáticamente según una métrica pero no tener sentido biológico. Hasta que no se realiza una validación biológica, los clústeres son solo hipótesis estadísticas.
+
 Además los resultados están condicionados al uso de la distancia euclídea/Manhattan y por eso son dependientes de la métrica. El uso de otras distancias podrían derivar en clústeres diferentes pero igualmente válidos.
+
 Por esto, aunque de los métodos analizados son las mejores opciones, podría haber algún método de clusterización que fuera aún más óptimo (sobretodo si hay supervisión). 
 
 
 
 
 
-# Métodos de aprendizaje supervisado:
+# Métodos de aprendizaje supervisado
 
-En esta fase, entrenamos modelos predictivos utilizando las etiquetas de clase conocidas (tipos de cáncer) para aprender patrones en la expresión génica capaces de clasificar nuevas muestras. Hemos seleccionado tres algoritmos con enfoques matemáticos distintos para asegurar una buena evaluación.
+En esta fase, entrenamos modelos predictivos utilizando las etiquetas de clase conocidas (tipos de cáncer) para que los modelos aprendan patrones en la expresión génica y sean capaces de clasificar nuevas muestras. Hemos seleccionado tres algoritmos con enfoques matemáticos distintos para asegurar una buena evaluación.
 
-### Preparación de los datos
+
+#### Preparación de los datos
 
 ```{r}
 # Limpiamos los nombres de las columnas
@@ -336,7 +363,6 @@ summary_table <- data.frame(
   Test_Porcentaje = round(100 * as.vector(test_prop), 2)
 )
 
-
 ```
 
 
@@ -345,7 +371,7 @@ summary_table <- data.frame(
 
 Es un método basado en instancias que clasifica una muestra según la mayoría de sus vecinos más cercanos en el espacio de características. Es no paramétrico y muy intuitivo.
 
-```{r}
+```{r knn}
 
 # ----------- Modelo knn -----------
 
@@ -394,14 +420,13 @@ conf_knn
 
 #Accuracy : 0.9937, muy buen modelo
 
-
 ```
 
 
 
 ### 2. LINEAR DISCRIMINANT ANALYSIS (LDA)
 
-Método probabilístico que busca combinaciones lineales de genes que maximicen la separación entre las medias de las clases y minimicen la varianza interna. Asume la normalidad en los datos.
+Es un método probabilístico que busca combinaciones lineales de genes que maximicen la separación entre las medias de las clases y minimicen la varianza interna. Asume la normalidad en los datos.
 
 ```{r}
 
@@ -505,8 +530,6 @@ if(num_lds >= 2) {
   
   print(plot_lda)
   
-  
-  
 } else {
   
   # Gráfico unidimensional si solo hay LD1
@@ -582,9 +605,9 @@ conf_lda
 
 ### 3. GRADIENT BOOSTING MACHINE (GBM)
 
-Es un método de ensamble basado en árboles de decisión. Construye modelos secuencialmente, donde cada nuevo árbol intenta corregir los errores del anterior, siendo muy potente para capturar relaciones complejas.
+Es un método de ensamblado basado en árboles de decisión. Construye modelos secuencialmente, donde cada nuevo árbol intenta corregir los errores del anterior, siendo muy potente para capturar relaciones complejas.
 
-```{r}
+```{r gbm}
 
 # ----------- Modelo GBM -----------
 
@@ -631,17 +654,16 @@ conf_gbm
 
 
 
+### *Pregunta 3:* Métodos supervisados
 
 
-
-## *Pregunta 3:* Métodos supervisados:
-
-
-#### **¿Cuál es el motivo por el cual habéis seleccionado esas técnicas de aprendizaje supervisado? ¿Cuál ha dado mejores resultados a la hora de clasificar las muestras? Razonad vuestra respuesta.**
+**¿Cuál es el motivo por el cual habéis seleccionado esas técnicas de aprendizaje supervisado? ¿Cuál ha dado mejores resultados a la hora de clasificar las muestras? Razonad vuestra respuesta.**
 
 Tras analizar varios métodos de aprendizaje supervisado, se han seleccionado determinados modelos por dos motivos principales: 
-    • El resultado de la comparación de métodos mediante gráficas ROC, que relacionan el equilibrio entre la detección de verdaderos positivos y la evitación de falsos positivos.
-    • La calidad del algoritmo, que queda plasmada en las matrices de confusión.
+
+El resultado de la comparación de métodos mediante gráficas ROC, que relacionan el equilibrio entre la detección de verdaderos positivos y la evitación de falsos positivos.
+
+La calidad del algoritmo, que queda plasmada en las matrices de confusión.
    
 En cuanto a la matriz de confusión, los métodos elegidos han sido aquellos con mayor accuracy en comparación con los demás, siendo capaces de clasificar correctamente cerca del 98% de las muestras. Asimismo, al observar la gráfica ROC, se aprecia que todos los métodos de aprendizaje supervisado presentan una gran efectividad y una proporción de verdaderos positivos mucho mayor que la de falsos positivos, salvo el método GBM, que muestra un rendimiento inferior.
 
@@ -649,14 +671,13 @@ Tras el análisis de las matrices de confusión, se ha considerado que K-NN, LDA
 
 
 
-#### **¿Habéis considerado oportuno implementar algún método de reducción de dimensionalidad para procesar los datos antes de implementarlos en dichas técnicas? ¿Por qué?**
+**¿Habéis considerado oportuno implementar algún método de reducción de dimensionalidad para procesar los datos antes de implementarlos en dichas técnicas? ¿Por qué?**
 
 Es conveniente aplicar la reducción de dimensionalidad cuando el número de muestras del que se parte es 10 veces mayor que el número de variables a analizar. 
 En nuestro ejercicio se partía de 800 muestas y 500 genes.
 
 
-
-#### **¿Qué aspectos positivos y negativos tienen cada una de las técnicas que habéis escogido?**
+ **¿Qué aspectos positivos y negativos tienen cada una de las técnicas que habéis escogido?**
 
 K-NN no construye un modelo sino que revisa datos, busca entre los k vecinos mas similares y asigna una etiqueta que luego usa para etiquetar nuevos datos. Este algoritmo es muy simple de comprender y de implementar. Al no construir un modelo es poco costoso computacionalmente. Esto también facilita que pueda responder de manera rápida ante cambios en  entradas de datos. Entre sus desventajas está la selección del valor K que muchas veces se realiza de manera arbitraia y que la etapa de clasificación puede ser especialmente lenta a medida que aumenta el tamaño de los datos. Además este algoritmo no puede manejar datos faltantes y, sin un procesamiento previo, tampoco datos nominales o atípicos. Por concluir con las desventajas, no muestra un buen rendimiento en el caso de datos desequilibrados.
 
@@ -667,15 +688,15 @@ El algoritmo GBM va construyendo un conjunto de árboles débiles de manera suce
 
 
 
+# Curvas ROC
 
-
-# Curvas ROC:
+Finalmente, hemos decidido implementar curvas ROC para evaluar y comparar los modelos porque permiten medir la capacidad de los modelos supervisados de distinguir clases reales. Esto facilita comparar su rendimiento de una forma objetiva.
 
 Dado que estamos ante un problema de clasificación multiclase (5 tipos de cáncer), no podemos usar una única curva ROC binaria estándar. Para evaluar el rendimiento, utilizamos la estrategia One-vs-Rest.
 
 Esto implica calcular una curva ROC para cada clase, considerándola como la clase "positiva" y agrupando todas las demás como la clase "negativa". El Área Bajo la Curva (AUC) nos indicará la probabilidad de que el modelo clasifique correctamente una muestra positiva elegida al azar por encima de una negativa. Un AUC de 0.5 indica un rendimiento aleatorio, mientras que 1.0 indica una clasificación perfecta.
 
-```{r}
+```{r roc}
 
 # Usamos multiclass.roc para calcular la curva ROC promedio en clasificaciones multiclases
 roc_knn <- multiclass.roc(test_data$Clase, prob_knn)
@@ -696,7 +717,8 @@ tabla_auc_seleccionados
 
 
 ### ROC One-vs-Rest por clase
-Para problemas multiclase como es este caso vemos las curvas ROC para cada clase individual
+
+Para problemas multiclase como es este caso vemos las curvas ROC para cada clase individual:
 
 ```{r}
 
@@ -764,7 +786,7 @@ print(tabla_auc_binaria)
 
 ```
 
-### Interpretación Curvas ROC
+#### Interpretación Curvas ROC
 
 El análisis de las curvas ROC y los valores de AUC (Área Bajo la Curva) revela un rendimiento excepcional en los modelos evaluados. Los tres modelos presentan valores de AUC superiores a 0.99, lo que indica una capacidad discriminativa casi perfecta. Esto sugiere que los perfiles de expresión génica de los distintos tipos de cáncer (AGH, CFB, CGC, CHC, HPB) son biológicamente muy distintos y separables matemáticamente.
 
@@ -775,31 +797,23 @@ Como conclusión, la alta dimensionalidad de los datos de expresión génica con
 
 
 
-## *Pregunta 1:* Procesamiento de los datos:
+### *Pregunta 4*:  Arquitectura Deep Learning
 
-#### **¿Qué método habéis escogido para llevar a cabo la imputación de los datos? Razonad vuestra respuesta**
+**De estas cuatro opciones, ¿qué tipo de arquitectura de deep learning sería la más adecuada para procesar datos de expresión génica? Razonad vuestra respuesta**
 
-Primeramente, verificamos la existencia de valores ausentes (NAs), confirmando que el dataset estaba completo. Seguidamente, identificamos y gestionamos las variables con varianza cero durante el preprocesamiento, ya que variables constantes provocan errores matemáticos (división por cero) al intentar escalar los datos para los modelos algorítmicos.
-
-
-#### **¿Habéis llevado a cabo algún otro tipo de procesamiento? Razonad vuestra respuesta**
-
-Se ha realizado un escalado y centrado de los datos, transformando las  variables para que tengan media 0 y desviación estándar 1. Esto garantiza que todas las tengan el mismo peso en la decisión de los modelos tanto supervisados como no supervisados, independientemente de sus unidades biológicas originales.
-
-
-
+  **a) Red de perceptrones (multiperceptron layers).**
+  
+  **b) Redes convolucionales.** 
+  
+  **c) Redes recurrentes.**
+  
+  **d) Redes de grafos.**
 
 
+Pese a que la opción a) (red de perceptones) es la opción clásica cuando comparamos muestras con genes, esta opción ignora las interacciones entre genes.
 
-## *Pregunta 4:* 
+Las redes convolucionales (opción b) se usan para datos como imágenes y las redes recurrentes (opción c) para secuencias como texto y audio. 
 
-#### **De estas cuatro opciones, ¿qué tipo de arquitectura de deep learning sería la más adecuada para procesar datos de expresión génica? Razonad vuestra respuesta**
-  **a) Red de perceptrones (multiperceptron layers).** **b) Redes convolucionales.** **c) Redes recurrentes.** **d) Redes de grafos.**
-
-
-Pese a que la opción a (red de perceptones) es la opción clásica cuando comparamos muestras con genes, esta opción ignora las interacciones entre genes. Las redes convolucionales se usan para datos como imágenes y las redes recurrentes para secuencias como texto y audio. 
-
-Sin embargo, la opción d (redes de grafos) es la decisión más adecuada, ya que los genes no funcionan aislados, sino que forman parte de rutas regulatorias y rutas metabólicas. Las redes de grafos utilizan la información de un vecino y la compara entre el resto de sus vecinos. Estas utilizan relaciones no lineales, lo que permiten integrar la información de los genes (serían los nodos del modelo), como la interacción entre estos (que serían las aristas del modelo). Las redes de grafos además permiten aislar el ruido frente a otras opciones como las redes recurrentes.
-
+Por ello, la opción d) (redes de grafos) es la decisión más adecuada, ya que los genes no funcionan aislados, sino que forman parte de rutas regulatorias y rutas metabólicas. Las redes de grafos utilizan la información de un vecino y la compara entre el resto de sus vecinos. Estas utilizan relaciones no lineales, lo que permiten integrar la información de los genes (serían los nodos del modelo), como la interacción entre estos (que serían las aristas del modelo). Las redes de grafos además permiten aislar el ruido frente a otras opciones como las redes recurrentes.
 
 
