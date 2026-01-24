@@ -422,6 +422,16 @@ conf_knn
 
 ```
 
+## Interpretación del modelo k-NN  
+**AUC = 0.99**
+
+Este método clasifica correctamente las cinco variables: **AGH, CFB, CGC, CHC y HPB**.  
+El **AUC por clase es igual a 1**, lo que indica un rendimiento perfecto en la discriminación individual de cada categoría.
+
+La precisión del modelo presenta algunas varaciones a lo largo del rango de valores de *k*, con varios picos locales. Aun así, la **accuracy se mantiene consistentemente por encima del 98.7%**, lo que refleja la **robustez del algoritmo**.
+
+El valor óptimo se observa en **k = 11**, donde el modelo alcanza su mayor precisión.
+
 
 
 ### 2. LINEAR DISCRIMINANT ANALYSIS (LDA)
@@ -600,6 +610,17 @@ conf_lda
 #Accuracy : 0.9874, buen modelo
 
 ```
+## Interpretación del análisis discriminante lineal (LDA)  
+**AUC = 0.99**
+Este método clasifica correctamente las cinco variables: **AGH, CFB, CGC, CHC y HPB**.  
+El **AUC por clase es igual a 1**, lo que indica una capacidad perfecta para discriminar cada categoría de manera individual.
+Las funciones discriminantes muestran la estructura interna del modelo:
+
+- **LD1 (eje horizontal)** es la primera función discriminante y captura la **mayor variación entre los grupos**.
+- **LD2 (eje vertical)** corresponde a la segunda función discriminante y explica la **segunda mayor proporción de variabilidad**.
+
+En el gráfico se observan **cinco clústers bien definidos**, cada uno asociado a una clase distinta.  
+La ausencia de solapamiento entre los grupos indica que el modelo ha encontrado **combinaciones lineales de características altamente discriminativas**, permitiendo separar de forma clara los distintos tipos de cáncer.
 
 
 
@@ -650,9 +671,11 @@ conf_gbm
 #Accuracy : 0.9874, buen modelo
 
 ```
-
-
-
+## Interpretación del Grdient Boost Machine (GBM)  
+El modelo ha alcanzado una precisión del 97.48% con un valor de Kappa de 0.9666, lo cual indica una concordancia casi perfecta entre las predicciones del modelo y las clases reales. El p-valor extremadamente bajo confirma que estos resultados son estadísticamente muy significativos.
+Al observar el gráfico de importancia de genes, **ATP5PD** muestra una importancia muchísimo mayor que el resto de los genes, llegando casi al 100, seguido por **ODAPH** y **RUFY1** con importancias intermedias, hasta llegar a genes como **CD72** con importancias muy bajas. Esta jerarquía tan marcada ouede sugerir interacciones no lineales complejas entre los genes biomarcadores.
+Se conseguido una especificidad casi perfecta rozando 100% en todas las clases, por lo que prácticamente no hay falsos positivos. 
+Al mismo tiempo, se han logrado sensibilidades muy altas en todos las clases, todas por encima del 92%, lo que demuestra que el modelo también es muy efectivo detectando los casos verdaderos de cada categoría.
 
 ### *Pregunta 3:* Métodos supervisados
 
@@ -815,5 +838,7 @@ Pese a que la opción a) (red de perceptones) es la opción clásica cuando comp
 Las redes convolucionales (opción b) se usan para datos como imágenes y las redes recurrentes (opción c) para secuencias como texto y audio. 
 
 Por ello, la opción d) (redes de grafos) es la decisión más adecuada, ya que los genes no funcionan aislados, sino que forman parte de rutas regulatorias y rutas metabólicas. Las redes de grafos utilizan la información de un vecino y la compara entre el resto de sus vecinos. Estas utilizan relaciones no lineales, lo que permiten integrar la información de los genes (serían los nodos del modelo), como la interacción entre estos (que serían las aristas del modelo). Las redes de grafos además permiten aislar el ruido frente a otras opciones como las redes recurrentes.
+
+
 
 
