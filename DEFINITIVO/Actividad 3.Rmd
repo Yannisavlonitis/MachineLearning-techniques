@@ -126,7 +126,6 @@ TSNE_plot <- ggplot(tsne_result, aes(x = X1, y = X2, color = Grupo)) +
 
 TSNE_plot
 
-
 ```
 
 
@@ -191,7 +190,7 @@ El objetivo del clustering en este contexto es descubrir si las muestras se agru
 
 ### 1. CLUSTERING JERÁRQUICO DIVISIVO: DIANA
 
-Construye clústeres desde arriba hacia abajo (top-down), comenzando con un solo grupo que contiene todas las muestras y dividiéndolo sucesivamente en subgrupos disimilares.
+El algoritmo Diana construye clústeres desde arriba hacia abajo (top-down), comenzando con un solo grupo que contiene todas las muestras y dividiéndolo sucesivamente en subgrupos disimilares.
 
 ```{r Diana}
 
@@ -224,7 +223,7 @@ clust_diana_euclidean
 
 ### 2. CLUSTERING JERÁRQUICO AGLOMERATIVO: WARD
 
-Funciona de abajo hacia arriba (bottom-up), fusionando las muestras más similares iterativamente intentando minimizar la varianza intra-cluster.
+El algoritmo de Ward funciona de abajo hacia arriba (bottom-up), fusionando las muestras más similares iterativamente intentando minimizar la varianza intra-cluster.
 
 ```{r ward}
 
@@ -367,7 +366,7 @@ summary_table <- data.frame(
 
 
 
-### 1. K-NEAREST NEIGHBORS (KNN)
+### 1. K-NEAREST NEIGHBORS (K-NN)
 
 Es un método basado en dinstancias que clasifica una muestra según la mayoría de sus vecinos más cercanos en el espacio de características. Es no paramétrico y muy intuitivo.
 
@@ -422,21 +421,19 @@ conf_knn
 
 ```
 
-## Interpretación del modelo k-NN  
-**AUC = 0.99**
+#### Interpretación del modelo k-NN  
 
-Este método clasifica correctamente las cinco variables: **AGH, CFB, CGC, CHC y HPB**.  
-El **AUC por clase es igual a 1**, lo que indica un rendimiento perfecto en la discriminación individual de cada categoría.
+Este método clasifica correctamente las cinco variables: AGH, CFB, CGC, CHC y HPB.  
 
-La precisión del modelo presenta algunas varaciones a lo largo del rango de valores de *k*, con varios picos locales. Aun así, la **accuracy se mantiene consistentemente por encima del 98.7%**, lo que refleja la **robustez del algoritmo**.
+La precisión del modelo presenta algunas varaciones a lo largo del rango de valores de *k*, con varios picos locales. Aun así, la accuracy se mantiene consistentemente por encima del 98.7%, lo que refleja la robustez del algoritmo.
 
-El valor óptimo se observa en **k = 11**, donde el modelo alcanza su mayor precisión.
+El valor óptimo se observa cuando *k* = 11, donde el modelo alcanza su mayor precisión.
 
 
 
 ### 2. LINEAR DISCRIMINANT ANALYSIS (LDA)
 
-Es un método probabilístico que busca combinaciones lineales de genes que maximicen la separación entre las medias de las clases y minimicen la varianza interna. Asume la normalidad en los datos.
+El algoritmo LDA es un método determinista que busca combinaciones lineales de genes que maximicen la separación entre las medias de las clases y minimicen la varianza interna. Para ello, asume la normalidad en los datos.
 
 ```{r}
 
@@ -610,17 +607,19 @@ conf_lda
 #Accuracy : 0.9874, buen modelo
 
 ```
-## Interpretación del análisis discriminante lineal (LDA)  
-**AUC = 0.99**
-Este método clasifica correctamente las cinco variables: **AGH, CFB, CGC, CHC y HPB**.  
-El **AUC por clase es igual a 1**, lo que indica una capacidad perfecta para discriminar cada categoría de manera individual.
+
+#### Interpretación del análisis discriminante lineal (LDA)  
+
+Este método clasifica correctamente las cinco variables: AGH, CFB, CGC, CHC y HPB.  
+
 Las funciones discriminantes muestran la estructura interna del modelo:
 
-- **LD1 (eje horizontal)** es la primera función discriminante y captura la **mayor variación entre los grupos**.
-- **LD2 (eje vertical)** corresponde a la segunda función discriminante y explica la **segunda mayor proporción de variabilidad**.
+- **LD1** (eje horizontal): es la primera función discriminante y captura la mayor variación entre los grupos.
 
-En el gráfico se observan **cinco clústers bien definidos**, cada uno asociado a una clase distinta.  
-La ausencia de solapamiento entre los grupos indica que el modelo ha encontrado **combinaciones lineales de características altamente discriminativas**, permitiendo separar de forma clara los distintos tipos de cáncer.
+- **LD2** (eje vertical): corresponde a la segunda función discriminante y explica la segunda mayor proporción de variabilidad.
+
+En el gráfico se observan cinco clústers bien definidos, cada uno asociado a una clase distinta.  
+La ausencia de solapamiento entre los grupos indica que el modelo ha encontrado combinaciones lineales de características altamente discriminativas, permitiendo por tanto separar de forma clara los distintos tipos de cáncer.
 
 
 
@@ -632,6 +631,7 @@ Es un método de ensamblado basado en árboles de decisión. Construye modelos s
 
 # ----------- Modelo GBM -----------
 
+set.seed(42)
 gbm_model <- train(
   Clase ~ ., 
   data = train_data,
@@ -668,56 +668,26 @@ prob_gbm <- predict(gbm_model, newdata = test_data, type = "prob")
 conf_gbm <- confusionMatrix(predicted_gbm, as.factor(test_data$Clase))
 conf_gbm
 
-#Accuracy : 0.9874, buen modelo
+#Accuracy : 0.9811, buen modelo
 
 ```
-## Interpretación del Grdient Boost Machine (GBM)  
-El modelo ha alcanzado una precisión del 97.48% con un valor de Kappa de 0.9666, lo cual indica una concordancia casi perfecta entre las predicciones del modelo y las clases reales. El p-valor extremadamente bajo confirma que estos resultados son estadísticamente muy significativos.
-Al observar el gráfico de importancia de genes, **ATP5PD** muestra una importancia muchísimo mayor que el resto de los genes, llegando casi al 100, seguido por **ODAPH** y **RUFY1** con importancias intermedias, hasta llegar a genes como **CD72** con importancias muy bajas. Esta jerarquía tan marcada ouede sugerir interacciones no lineales complejas entre los genes biomarcadores.
-Se conseguido una especificidad casi perfecta rozando 100% en todas las clases, por lo que prácticamente no hay falsos positivos. 
+
+#### Interpretación del Gardient Boost Machine (GBM)  
+
+El modelo ha alcanzado una precisión del 98.11% con un valor de Kappa de 0.975, lo cual indica una concordancia casi perfecta entre las predicciones del modelo y las clases reales. El p-valor extremadamente bajo confirma que estos resultados son estadísticamente significativos.
+Al observar el gráfico de importancia de genes, *ATP5PD* muestra una importancia muchísimo mayor que el resto de los genes, llegando casi al 100, seguido por *ODAPH* y *RUFY1* con importancias intermedias, hasta llegar a genes como *CD72* con importancias muy bajas. Esta jerarquía tan marcada puede sugerir interacciones no lineales complejas entre los genes biomarcadores.
+Se conseguido una especificidad casi perfecta en todas las clases, por lo que prácticamente no hay falsas etiquetas. 
 Al mismo tiempo, se han logrado sensibilidades muy altas en todos las clases, todas por encima del 92%, lo que demuestra que el modelo también es muy efectivo detectando los casos verdaderos de cada categoría.
 
-### *Pregunta 3:* Métodos supervisados
 
 
-**¿Cuál es el motivo por el cual habéis seleccionado esas técnicas de aprendizaje supervisado? ¿Cuál ha dado mejores resultados a la hora de clasificar las muestras? Razonad vuestra respuesta.**
-
-Tras analizar varios métodos de aprendizaje supervisado, se han seleccionado determinados modelos por dos motivos principales: 
-
-El resultado de la comparación de métodos mediante gráficas ROC, que relacionan el equilibrio entre la detección de verdaderos positivos y la evitación de falsos positivos.
-
-La calidad del algoritmo, que queda plasmada en las matrices de confusión.
-   
-En cuanto a la matriz de confusión, los métodos elegidos han sido aquellos con mayor accuracy en comparación con los demás, siendo capaces de clasificar correctamente cerca del 98% de las muestras. Asimismo, al observar la gráfica ROC, se aprecia que todos los métodos de aprendizaje supervisado presentan una gran efectividad y una proporción de verdaderos positivos mucho mayor que la de falsos positivos, salvo el método GBM, que muestra un rendimiento inferior.
-
-Tras el análisis de las matrices de confusión, se ha considerado que K-NN, LDA y GBM son los métodos que mejor identifican los tumores en función de la expresión diferencial de los genes, ya que presentan muy pocos o ningún falso positivo y/o negativo. Además, los valores de precisión son elevados (Accuracy K-NN: 0.9937, LDA:0.9874 y GMB:0.979), los intervalos de confianza son bastante ajustados (K-NN:0.9655, 0.9998; LDA:0.9553, 0.9985 y GMB:0.9517,0.9931) y la concordancia entre predicciones es alta (Kappa K-NN:0.9917, LDA:0.9834 y GMB:0.9721).
-
-
-
-**¿Habéis considerado oportuno implementar algún método de reducción de dimensionalidad para procesar los datos antes de implementarlos en dichas técnicas? ¿Por qué?**
-
-Es conveniente aplicar la reducción de dimensionalidad cuando el número de muestras del que se parte es 10 veces mayor que el número de variables a analizar. 
-En nuestro ejercicio se partía de 800 muestas y 500 genes.
-
-
- **¿Qué aspectos positivos y negativos tienen cada una de las técnicas que habéis escogido?**
-
-K-NN no construye un modelo sino que revisa datos, busca entre los k vecinos mas similares y asigna una etiqueta que luego usa para etiquetar nuevos datos. Este algoritmo es muy simple de comprender y de implementar. Al no construir un modelo es poco costoso computacionalmente. Esto también facilita que pueda responder de manera rápida ante cambios en  entradas de datos. Entre sus desventajas está la selección del valor K que muchas veces se realiza de manera arbitraia y que la etapa de clasificación puede ser especialmente lenta a medida que aumenta el tamaño de los datos. Además este algoritmo no puede manejar datos faltantes y, sin un procesamiento previo, tampoco datos nominales o atípicos. Por concluir con las desventajas, no muestra un buen rendimiento en el caso de datos desequilibrados.
-
-Comparando el método LDA con la regresión logística presenta dos ventajas, por un lado que las clases estén bien separadas, no aporta inestabilidad a los parámetros estimados y por otro lado, para un bajo número de observaciones  este método es más estable. Como desventaja podemos destacar que requiere una distribución normal de los datos e igualdad de varianzas
-
-El algoritmo GBM va construyendo un conjunto de árboles débiles de manera sucesiva para combinarlos, reducir el error y generar un modelo más preciso. Ventajas: ofrece muchas opciones de ajuste de hiperparámetros lo que hace que sea un algorimo muy flexible. Funciona muy bien con datos categóricos y numéricos y faltantes sin necesidad de procesar o imputar los datos. Por otro lado, a parte de que es costoso computacionalemnte, el hecho de que este algoritmo sigue trabajando para minimizar todos los errores conlleva el riesgo de que enfatice demasiado los valores atípicos y produzca sobreajuste
-
-
-
-
-# Curvas ROC
+## Curvas ROC
 
 Finalmente, hemos decidido implementar curvas ROC para evaluar y comparar los modelos porque permiten medir la capacidad de los modelos supervisados de distinguir clases reales. Esto facilita comparar su rendimiento de una forma objetiva.
 
 Dado que estamos ante un problema de clasificación multiclase (5 tipos de cáncer), no podemos usar una única curva ROC binaria estándar. Para evaluar el rendimiento, utilizamos la estrategia One-vs-Rest.
 
-Esto implica calcular una curva ROC para cada clase, considerándola como la clase "positiva" y agrupando todas las demás como la clase "negativa". El Área Bajo la Curva (AUC) nos indicará la probabilidad de que el modelo clasifique correctamente una muestra positiva elegida al azar por encima de una negativa. Un AUC de 0.5 indica un rendimiento aleatorio, mientras que 1.0 indica una clasificación perfecta.
+Esto implica calcular una curva ROC para cada clase, considerándola como la clase "positiva" y agrupando todas las demás como la clase "negativa". El Área Bajo la Curva (AUC) nos indicará la probabilidad de que el modelo clasifique correctamente una muestra positiva elegida al azar por encima de una negativa. Un AUC de 0.5 indica una organización aleatoria, mientras que 1.0 indica una clasificación perfecta.
 
 ```{r roc}
 
@@ -811,7 +781,7 @@ print(tabla_auc_binaria)
 
 #### Interpretación Curvas ROC
 
-El análisis de las curvas ROC y los valores de AUC (Área Bajo la Curva) revela un rendimiento excepcional en los modelos evaluados. Los tres modelos presentan valores de AUC superiores a 0.99, lo que indica una capacidad discriminativa casi perfecta. Esto sugiere que los perfiles de expresión génica de los distintos tipos de cáncer (AGH, CFB, CGC, CHC, HPB) son biológicamente muy distintos y separables matemáticamente.
+El análisis de las curvas ROC y los valores de AUC (Área Bajo la Curva) revela un rendimiento excepcional en todos los modelos evaluados. Los tres modelos presentan valores de AUC superiores a 0.99, lo que indica una capacidad discriminativa casi perfecta. Esto sugiere que los perfiles de expresión génica de los distintos tipos de cáncer (AGH, CFB, CGC, CHC, HPB) son biológicamente muy distintos y separables matemáticamente.
 
 Haciendo un análisis por clase, vemos que las clases AGH, CFB y CHC obtuvieron un AUC de 1.00 en casi todos los modelos, lo que implica que no hubo confusión alguna al clasificar estas muestras frente al resto. La clase CGC presentó una mínima "dificultad" (AUC 0.998 en GBM y 0.999 en LDA), lo cual podría indicar una ligera similitud biológica con alguno de los otros subtipos, aunque a efectos prácticos la clasificación es óptima.
 
@@ -819,8 +789,37 @@ Como conclusión, la alta dimensionalidad de los datos de expresión génica con
 
 
 
+## *Pregunta 3*: Métodos supervisados
 
-### *Pregunta 4*:  Arquitectura Deep Learning
+**¿Cuál es el motivo por el cual habéis seleccionado esas técnicas de aprendizaje supervisado? ¿Cuál ha dado mejores resultados a la hora de clasificar las muestras? Razonad vuestra respuesta.**
+
+Tras analizar varios métodos de aprendizaje supervisado y comprobados a través de curvas ROC, se han seleccionado los modelos por dos motivos principales: 
+
+- El resultado de la comparación de métodos mediante gráficas ROC, que relacionan el equilibrio entre la detección de verdaderos positivos y la evitación de falsos positivos.
+
+- La calidad del algoritmo, que queda plasmada en las matrices de confusión.
+   
+En cuanto a la matriz de confusión, los métodos elegidos han sido aquellos con mayor accuracy en comparación con los demás, siendo capaces de clasificar correctamente cerca del 98% de las muestras. Asimismo, al observar la gráfica ROC, se aprecia que todos los métodos de aprendizaje supervisado presentan una gran efectividad y una proporción de verdaderos positivos mucho mayor que la de falsos positivos, salvo el método GBM, que muestra un rendimiento inferior.
+
+Tras el análisis de las matrices de confusión, se ha considerado que K-NN, LDA y GBM son los métodos que mejor identifican los tumores en función de la expresión diferencial de los genes, ya que presentan muy pocos o ningún falso positivo y/o negativo. Además, los valores de precisión son elevados (Accuracy K-NN: 0.9937, LDA:0.9874 y GMB:0.979), los intervalos de confianza son bastante ajustados (K-NN:0.9655, 0.9998; LDA:0.9553, 0.9985 y GMB:0.9517,0.9931) y la concordancia entre predicciones es alta (Kappa K-NN:0.9917, LDA:0.9834 y GMB:0.9721).
+
+
+
+**¿Habéis considerado oportuno implementar algún método de reducción de dimensionalidad para procesar los datos antes de implementarlos en dichas técnicas? ¿Por qué?**
+
+Es conveniente aplicar la reducción de dimensionalidad cuando el número de muestras del que se parte es 10 veces mayor que el número de variables a analizar. 
+En nuestro ejercicio se partía de 800 muestas y 500 genes.
+
+
+ **¿Qué aspectos positivos y negativos tienen cada una de las técnicas que habéis escogido?**
+
+K-NN no construye un modelo sino que revisa datos, busca entre los k vecinos mas similares y asigna una etiqueta que luego usa para etiquetar nuevos datos. Este algoritmo es muy simple de comprender y de implementar. Al no construir un modelo es poco costoso computacionalmente. Esto también facilita que pueda responder de manera rápida ante cambios en  entradas de datos. Entre sus desventajas está la selección del valor K que muchas veces se realiza de manera arbitraia y que la etapa de clasificación puede ser especialmente lenta a medida que aumenta el tamaño de los datos. Además este algoritmo no puede manejar datos faltantes y, sin un procesamiento previo, tampoco datos nominales o atípicos. Por concluir con las desventajas, no muestra un buen rendimiento en el caso de datos desequilibrados.
+
+Comparando el método LDA con la regresión logística presenta dos ventajas, por un lado que las clases estén bien separadas, no aporta inestabilidad a los parámetros estimados y por otro lado, para un bajo número de observaciones  este método es más estable. Como desventaja podemos destacar que requiere una distribución normal de los datos e igualdad de varianzas.
+
+El algoritmo GBM va construyendo un conjunto de árboles débiles de manera sucesiva para combinarlos, reducir el error y generar un modelo más preciso. Ventajas: ofrece muchas opciones de ajuste de hiperparámetros lo que hace que sea un algorimo muy flexible. Funciona muy bien con datos categóricos y numéricos y faltantes sin necesidad de procesar o imputar los datos. Por otro lado, a parte de que es costoso computacionalemnte, el hecho de que este algoritmo sigue trabajando para minimizar todos los errores conlleva el riesgo de que enfatice demasiado los valores atípicos y produzca sobreajuste.
+
+## *Pregunta 4*:  Arquitectura Deep Learning
 
 **De estas cuatro opciones, ¿qué tipo de arquitectura de deep learning sería la más adecuada para procesar datos de expresión génica? Razonad vuestra respuesta**
 
